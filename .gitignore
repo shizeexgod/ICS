@@ -1,0 +1,29 @@
+# --- Python (Бэкенд) ---
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Секреты и настройки (ВАЖНО!) ---
+# Никогда не коммить API ключи и пароли!
+.env
+.env.local
+.env.*.local
+
+# --- Frontend (если есть Node.js) ---
+node_modules/
+dist/
+build/
+.parcel-cache/
+
+# --- Системные файлы и IDE ---
+.DS_Store
+.vscode/
+.idea/
+.cursor/
+*.log
+desktop.ini
+thumbs.db

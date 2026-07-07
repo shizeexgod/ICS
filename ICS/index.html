@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="blue">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d16">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<title>ICS — автоматические напоминания о записи для вашего бизнеса</title>
+<meta name="description" content="ICS автоматически напоминает вашим клиентам о записи в Telegram, WhatsApp и MAX. Меньше пропущенных визитов — больше довольных клиентов.">
+<link rel="icon" href="assets/logo-source.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/logo-source.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+
+<header class="header">
+  <div class="container header__inner">
+    <a href="#top" class="brand">
+      <span class="brand__mark">
+        <img src="assets/logo-source.png" alt="ICS">
+      </span>
+      <span class="brand__text">
+        <span class="brand__name">ICS</span>
+        <span class="brand__sub">напоминания о записи</span>
+      </span>
+    </a>
+
+    <nav class="nav" id="nav">
+      <a href="#about"><span>О нас</span></a>
+      <a href="#services"><span>Услуги</span></a>
+      <a href="#channels"><span>Мессенджеры</span></a>
+      <a href="#process"><span>Как это работает</span></a>
+      <a href="#contacts"><span>Контакты</span></a>
+      <button type="button" class="nav__cabinet" id="openCabinet"><span>Личный кабинет</span></button>
+    </nav>
+
+    <div class="header__actions">
+      <div class="theme-switch" id="themeSwitch" role="group" aria-label="Тема оформления">
+        <button class="theme-switch__btn" data-theme-choice="blue" aria-label="Синяя тема" title="Синяя тема">
+          <span class="theme-swatch theme-swatch--blue"></span>
+        </button>
+        <button class="theme-switch__btn" data-theme-choice="light" aria-label="Светлая тема" title="Светлая тема">
+          <span class="theme-swatch theme-swatch--light"></span>
+        </button>
+        <button class="theme-switch__btn" data-theme-choice="dark" aria-label="Тёмная тема" title="Тёмная тема">
+          <span class="theme-swatch theme-swatch--dark"></span>
+        </button>
+      </div>
+      <button class="icon-btn burger" id="burger" aria-label="Меню">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero container">
+    <div class="hero__badge">Сервис автонапоминаний для бизнеса</div>
+    <h1 class="hero__title">
+      Благодаря нам ваши клиенты<br>
+      не забудут о своей<br>
+      <span class="accent-text">записи</span>
+    </h1>
+    <p class="hero__desc">
+      ICS автоматически отправляет клиентам напоминания о визите в Telegram, WhatsApp и MAX — от вашего официального аккаунта, без ручной работы администратора.
+    </p>
+    <div class="hero__cta">
+      <a href="#contacts" class="btn btn--primary">
+        Подключить ICS
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#services" class="btn btn--ghost">Что умеет сервис</a>
+    </div>
+
+    <div class="hero__frame">
+      <div class="chat-mock">
+        <div class="chat-mock__head">
+          <span class="dot dot--wa"></span>
+          <span class="dot dot--tg"></span>
+          <span class="dot dot--max"></span>
+          <span class="chat-mock__title">Напоминания ICS</span>
+        </div>
+        <div class="chat-mock__body">
+          <div class="bubble bubble--in">
+            Здравствуйте, Анна! Напоминаем: завтра в 14:00 у вас запись «Стрижка + укладка». Ждём вас 💇‍♀️
+          </div>
+          <div class="bubble bubble--in delay1">
+            Здравствуйте! Напоминаем о записи на ТО автомобиля сегодня в 18:30. До встречи! 🚗
+          </div>
+          <div class="bubble bubble--out delay2">Спасибо, буду вовремя!</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__num" data-count-to="3" data-suffix="">0</span>
+        <span class="stat__label">мессенджера в одном сервисе</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-static="24/7">0</span>
+        <span class="stat__label">автоматическая работа без выходных</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-count-to="40" data-prefix="−" data-suffix="%">0</span>
+        <span class="stat__label">в среднем пропущенных записей у клиентов</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-count-to="5" data-suffix="&nbsp;мин">0</span>
+        <span class="stat__label">на подключение сервиса к бизнесу</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section container">
+    <div class="section__head">
+      <span class="eyebrow">О нас</span>
+      <h2>Мы делаем так, чтобы клиенты<br>всегда приходили вовремя</h2>
+    </div>
+    <div class="about__grid">
+      <div class="about__text">
+        <p>
+          ICS — сервис автоматизации коммуникации с клиентами для салонов красоты, автосервисов, клиник, студий и любых компаний, работающих по записи. Мы решаем одну из самых частых проблем бизнеса — забытые и пропущенные визиты, которые напрямую съедают выручку и время сотрудников.
+        </p>
+        <p>
+          Наша система подключается к вашей записи и берёт на себя всю рутину: автоматически формирует и отправляет клиенту напоминание о визите в Telegram, WhatsApp или MAX — там, где клиенту удобнее всего. Сообщения приходят от имени вашей компании, через официальные аккаунты, поэтому выглядят естественно и вызывают доверие.
+        </p>
+        <p>
+          Мы начинали с задачи для локальных сервисных бизнесов и выросли в универсальную платформу напоминаний, которую сегодня используют салоны красоты, автосервисы, барбершопы, клиники и мастерские по всей стране.
+        </p>
+      </div>
+      <ul class="about__points">
+        <li>
+          <span class="about__num">01</span>
+          <div>
+            <h4>Без ручной работы</h4>
+            <p>Администратору больше не нужно вручную обзванивать и писать клиентам — всё происходит автоматически.</p>
+          </div>
+        </li>
+        <li>
+          <span class="about__num">02</span>
+          <div>
+            <h4>Официальные аккаунты</h4>
+            <p>Рассылки идут через ваш собственный бизнес-аккаунт, а не с безликих номеров и ботов.</p>
+          </div>
+        </li>
+        <li>
+          <span class="about__num">03</span>
+          <div>
+            <h4>Любая сфера услуг</h4>
+            <p>Салоны красоты, СТО, клиники, барбершопы, фитнес-студии и другие сервисы, работающие по записи.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="section container">
+    <div class="section__head">
+      <span class="eyebrow">Услуги</span>
+      <h2>Что делает ICS</h2>
+    </div>
+
+    <div class="cards-grid">
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.5 8.5 0 0 1-12.36 7.56L3 20l1.06-5.35A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Автоматические напоминания</h3>
+        <p>Клиент автоматически получает уведомление о записи в удобном ему мессенджере — Telegram, WhatsApp или MAX, без участия администратора.</p>
+      </article>
+
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4.5 8-11.2V5l-8-3-8 3v5.8C4 17.5 12 22 12 22Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Работа через официальные аккаунты</h3>
+        <p>Все сообщения отправляются от имени вашей компании через подключённые официальные бизнес-аккаунты — клиенты видят знакомый и надёжный контакт.</p>
+      </article>
+
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+        <h3>Гибкие сценарии напоминаний</h3>
+        <p>Настраиваем время и количество напоминаний: за сутки, за несколько часов или сразу после записи — под специфику вашего бизнеса.</p>
+      </article>
+
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 4v16h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 15l3.5-4 3 3L20 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Интеграция с CRM и записью</h3>
+        <p>Подключаемся к вашей системе онлайн-записи или CRM: YClients, DIKIDI, amoCRM и другим — данные о визитах синхронизируются автоматически.</p>
+      </article>
+
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 20V4M12 4l-5 5M12 4l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Уведомления об изменениях</h3>
+        <p>Если запись переносится или отменяется, клиент моментально узнаёт об этом — без звонков и лишних недопониманий.</p>
+      </article>
+
+      <article class="card">
+        <div class="card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Сбор отзывов после визита</h3>
+        <p>После оказания услуги сервис может отправить клиенту сообщение с просьбой оставить отзыв — это повышает рейтинг и удержание клиентов.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- CHANNELS -->
+  <section id="channels" class="section container">
+    <div class="section__head">
+      <span class="eyebrow">Мессенджеры</span>
+      <h2>Работаем там, где удобно клиенту</h2>
+    </div>
+
+    <div class="channels-grid">
+      <div class="channel">
+        <div class="channel__icon channel__icon--tg">
+          <svg width="24" height="24" viewBox="0 0 240 240" fill="none"><circle cx="120" cy="120" r="120" fill="currentColor" opacity="0.15"/><path d="M180 72 44 124c-9 3-9 9-2 11l35 11 13 41c2 6 4 8 8 8 4 0 6-2 8-4l19-18 39 29c7 5 13 2 15-7l27-127c3-11-4-16-13-13Z" fill="currentColor"/></svg>
+        </div>
+        <h3>Telegram</h3>
+        <p>Напоминания через официальный Telegram-бот вашей компании: быстро, надёжно, с высокой открываемостью сообщений.</p>
+      </div>
+
+      <div class="channel">
+        <div class="channel__icon channel__icon--wa">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="currentColor" opacity="0.15"/><path d="M17.5 6.5A7.8 7.8 0 0 0 6.2 16.8L5 19l2.3-1.2A7.8 7.8 0 1 0 17.5 6.5Z" stroke="currentColor" stroke-width="1.4"/><path d="M9.3 9.6c.2-.5.4-.5.6-.5h.5c.2 0 .4 0 .5.4.2.5.6 1.5.6 1.6.1.1.1.3 0 .4-.1.2-.1.3-.3.5-.1.1-.3.3-.4.4-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2 1.2 1 2.1 1.3 2.5 1.4.3.1.5.1.6-.1.2-.2.7-.8.9-1 .2-.2.4-.2.6-.1l1.5.7c.2.1.4.2.4.3.1.2.1 1-.2 1.4-.4.5-1.3 1-2.4.7-1.7-.4-3.6-1.4-5-2.9-1.1-1.2-1.9-2.6-2.1-3.1-.2-.5-.9-1.7-.9-2.4 0-.6.3-1 .5-1.2Z" fill="currentColor"/></svg>
+        </div>
+        <h3>WhatsApp</h3>
+        <p>Уведомления через WhatsApp Business API от имени вашей организации — привычный канал для большинства клиентов.</p>
+      </div>
+
+      <div class="channel">
+        <div class="channel__icon channel__icon--max">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="currentColor" opacity="0.15"/><path d="M4 17 7 7l3 6 3-6 3 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>MAX</h3>
+        <p>Поддержка отечественного мессенджера MAX — отправляем напоминания клиентам, которые предпочитают этот канал связи.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY US -->
+  <section class="section container">
+    <div class="section__head">
+      <span class="eyebrow">Почему выбирают ICS</span>
+      <h2>Просто, надёжно, без лишних действий</h2>
+    </div>
+
+    <div class="why-grid">
+      <div class="why">
+        <span class="why__num">01</span>
+        <h4>Быстрый запуск</h4>
+        <p>Подключаем сервис к вашей записи или CRM за один рабочий день, без сложных технических настроек.</p>
+      </div>
+      <div class="why">
+        <span class="why__num">02</span>
+        <h4>Своя интеграция</h4>
+        <p>Работаем с популярными системами записи и готовы настроить индивидуальное подключение под ваш бизнес.</p>
+      </div>
+      <div class="why">
+        <span class="why__num">03</span>
+        <h4>Прозрачная стоимость</h4>
+        <p>Понятные тарифы по числу напоминаний, без скрытых платежей и долгосрочных обязательств.</p>
+      </div>
+      <div class="why">
+        <span class="why__num">04</span>
+        <h4>Стабильная работа</h4>
+        <p>Сервис работает круглосуточно и без выходных, автоматически контролируя отправку сообщений.</p>
+      </div>
+      <div class="why">
+        <span class="why__num">05</span>
+        <h4>Поддержка 24/7</h4>
+        <p>Помогаем с настройкой сценариев и оперативно отвечаем на вопросы по работе сервиса.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section id="process" class="section container">
+    <div class="section__head">
+      <span class="eyebrow">Как это работает</span>
+      <h2>Запуск ICS в 6 шагов</h2>
+    </div>
+
+    <ol class="steps">
+      <li><span class="steps__num">01</span><div><h4>Заявка</h4><p>Оставляете заявку и рассказываете об особенностях вашего бизнеса и записи клиентов.</p></div></li>
+      <li><span class="steps__num">02</span><div><h4>Подключение мессенджеров</h4><p>Подключаем официальные аккаунты в Telegram, WhatsApp и MAX от лица вашей компании.</p></div></li>
+      <li><span class="steps__num">03</span><div><h4>Интеграция с записью</h4><p>Связываем ICS с вашей CRM или системой онлайн-записи для автоматического обмена данными.</p></div></li>
+      <li><span class="steps__num">04</span><div><h4>Настройка сценариев</h4><p>Определяем, когда и сколько раз клиент получит напоминание, а также текст сообщений.</p></div></li>
+      <li><span class="steps__num">05</span><div><h4>Тестовый запуск</h4><p>Проверяем работу на реальных записях и корректируем настройки при необходимости.</p></div></li>
+      <li><span class="steps__num">06</span><div><h4>Запуск и поддержка</h4><p>Сервис работает в фоне, а мы сопровождаем и помогаем при любых вопросах.</p></div></li>
+    </ol>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta container">
+    <div class="cta__box">
+      <h2>Готовы избавиться<br>от пропущенных записей?</h2>
+      <p>Напишите нам — расскажем, как ICS будет работать именно в вашем бизнесе.</p>
+      <a href="https://t.me/icsoffic1al" target="_blank" rel="noopener" class="btn btn--primary">
+        Написать в Telegram
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer id="contacts" class="footer">
+  <div class="container footer__grid">
+    <div class="footer__brand">
+      <a href="#top" class="brand">
+        <span class="brand__mark"><img src="assets/logo-source.png" alt="ICS"></span>
+        <span class="brand__text">
+          <span class="brand__name">ICS</span>
+          <span class="brand__sub">напоминания о записи</span>
+        </span>
+      </a>
+      <p>Автоматическая отправка напоминаний о записи клиентам в Telegram, WhatsApp и MAX.</p>
+    </div>
+
+    <div class="footer__col">
+      <h5>Контакты</h5>
+      <a href="https://t.me/icsoffic1al" target="_blank" rel="noopener">@icsoffic1al</a>
+      <a href="tel:+79643704871">+7 964 370-48-71</a>
+    </div>
+
+    <div class="footer__col">
+      <h5>Мессенджеры</h5>
+      <span>Telegram</span>
+      <span>WhatsApp</span>
+      <span>MAX</span>
+    </div>
+
+    <div class="footer__col">
+      <h5>График работы</h5>
+      <span>Автоматика: 24/7</span>
+      <span>Поддержка: Пн–Пт, 09:00–19:00</span>
+    </div>
+  </div>
+  <div class="container footer__bottom">
+    <span>© 2026 ICS. Все права защищены.</span>
+    <span>Сервис автоматизации напоминаний о записи</span>
+  </div>
+</footer>
+
+<!-- Личный кабинет: оверлей с регистрацией / OTP / списком записей -->
+<div class="cabinet" id="cabinet" aria-hidden="true">
+  <div class="cabinet__backdrop" id="cabinetBackdrop"></div>
+  <div class="cabinet__panel" role="dialog" aria-modal="true" aria-labelledby="cabinetTitle">
+    <button type="button" class="cabinet__close" id="closeCabinet" aria-label="Закрыть">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- Шаг 1: регистрация / вход -->
+    <div class="cabinet__step" id="cabinetStepRegister">
+      <span class="cabinet__eyebrow">Личный кабинет</span>
+      <h2 class="cabinet__title" id="cabinetTitle">Вход по номеру телефона</h2>
+      <p class="cabinet__desc">Укажите имя и телефон — мы отправим одноразовый код для входа.</p>
+      <form class="cabinet__form" id="registerForm">
+        <label class="cabinet__field">
+          <span>Имя</span>
+          <input type="text" name="name" autocomplete="name" placeholder="Анна Иванова" required minlength="2">
+        </label>
+        <label class="cabinet__field">
+          <span>Телефон</span>
+          <input type="tel" name="phone" autocomplete="tel" placeholder="+7 999 123-45-67" required>
+        </label>
+        <p class="cabinet__error" id="registerError" hidden></p>
+        <button type="submit" class="btn btn--primary cabinet__submit">
+          Получить код
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Шаг 2: подтверждение OTP -->
+    <div class="cabinet__step" id="cabinetStepVerify" hidden>
+      <span class="cabinet__eyebrow">Подтверждение</span>
+      <h2 class="cabinet__title">Введите код из SMS</h2>
+      <p class="cabinet__desc">Код отправлен на <strong id="verifyPhoneDisplay"></strong></p>
+      <p class="cabinet__dev-hint" id="verifyDevHint" hidden></p>
+      <form class="cabinet__form" id="verifyForm">
+        <label class="cabinet__field">
+          <span>Код из SMS</span>
+          <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required pattern="[0-9]{4,6}" maxlength="6">
+        </label>
+        <p class="cabinet__error" id="verifyError" hidden></p>
+        <button type="submit" class="btn btn--primary cabinet__submit">Войти</button>
+        <button type="button" class="btn btn--ghost cabinet__back" id="backToRegister">Изменить номер</button>
+      </form>
+    </div>
+
+    <!-- Шаг 3: дашборд -->
+    <div class="cabinet__step" id="cabinetStepDashboard" hidden>
+      <div class="cabinet__dash-head">
+        <div>
+          <span class="cabinet__eyebrow">Личный кабинет</span>
+          <h2 class="cabinet__title">Мои записи</h2>
+          <p class="cabinet__desc">Здравствуйте, <strong id="dashboardUserName"></strong></p>
+        </div>
+        <button type="button" class="btn btn--ghost cabinet__logout" id="cabinetLogout">Выйти</button>
+      </div>
+      <div class="cabinet__bookings" id="bookingsList">
+        <div class="cabinet__loading" id="bookingsLoading">Загрузка записей…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- URL API подставляется при сборке Vercel из переменной ICS_API_BASE (см. js/config.js) -->
+<script src="js/config.js"></script>
+<script src="js/script.js"></script>
+<script src="js/cabinet.js"></script>
+</body>
+</html>
