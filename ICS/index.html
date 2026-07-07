@@ -430,8 +430,13 @@
   </div>
 </div>
 
-<!-- API URL: js/config.js (локально) или ICS_API_BASE на Vercel при сборке -->
-<script src="js/config.js"></script>
+<!-- API: локально js/config.js, на Vercel — /api/config из переменной ICS_API_BASE -->
+<script>
+(function () {
+  var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  document.write('<script src="' + (isLocal ? 'js/config.js' : '/api/config') + '"><\/script>');
+})();
+</script>
 <script src="js/script.js"></script>
 <script src="js/cabinet.js"></script>
 </body>

@@ -1,4 +1,11 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "."
+  "rewrites": [
+    { "source": "/js/config.js", "destination": "/api/config" }
+  ],
+  "functions": {
+    "api/config.js": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  }
 }

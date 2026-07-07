@@ -1,0 +1,11 @@
+# Деплой на Amvera Cloud (https://cloud.amvera.ru)
+# Документация: https://docs.amvera.ru/applications/environments/python-pip.html
+meta:
+  environment: python
+  toolchain:
+    name: pip
+    version: "3.12"
+
+run:
+  command: uvicorn main:app --host 0.0.0.0 --port 5000
+  containerPort: 5000

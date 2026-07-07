@@ -95,7 +95,7 @@
   async function apiFetch(path, options = {}) {
     const base = apiBase();
     if (!base) {
-      throw new Error("API не настроен. Задайте ICS_API_BASE в Vercel или js/config.js.");
+      throw new Error("API не настроен. Локально: js/config.js. На Vercel: переменная ICS_API_BASE.");
     }
     const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
     const token = getToken();

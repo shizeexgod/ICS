@@ -1,3 +1,2 @@
-// Локальная разработка — бэкенд на localhost:8000
-// На Vercel этот файл перезаписывается при сборке из переменной ICS_API_BASE
-window.ICS_API_BASE = "http://localhost:8000";
+// URL бэкенда на Amvera (без / в конце)
+window.ICS_API_BASE = "https://ics-bot-shizexgod.amvera.io";

@@ -1,7 +1,0 @@
-{
-  "name": "ics-frontend",
-  "private": true,
-  "scripts": {
-    "build": "node scripts/generate-config.js"
-  }
-}

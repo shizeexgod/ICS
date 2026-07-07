@@ -1,5 +1,3 @@
-# Локальные переопределения (не коммитить)
 .env.local
-
-# Сгенерированный на Vercel config — в репозитории держим config.example.js
-# js/config.js закоммичен с localhost для удобства локальной разработки
+node_modules/
+js/config.js
