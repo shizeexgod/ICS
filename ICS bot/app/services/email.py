@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import ssl
 
 import aiosmtplib
 from email.mime.multipart import MIMEMultipart
@@ -50,12 +51,19 @@ def _build_html_body(code: str) -> str:
 </html>"""
 
 
+def _smtp_tls_mode(port: int) -> tuple[bool, bool]:
+    """Return (use_tls, start_tls) for Yandex-compatible SMTP ports."""
+    if port == 465:
+        return True, False
+    return False, True
+
+
 async def send_verification_email(to_email: str, code: str) -> bool:
     """Send a 4-digit verification code to the given email address."""
-    smtp_server = os.getenv("SMTP_SERVER")
-    smtp_port_raw = os.getenv("SMTP_PORT", "587")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_server = (os.getenv("SMTP_SERVER") or "").strip()
+    smtp_port_raw = (os.getenv("SMTP_PORT") or "465").strip()
+    smtp_user = (os.getenv("SMTP_USER") or "").strip()
+    smtp_password = (os.getenv("SMTP_PASSWORD") or "").strip()
 
     if not all([smtp_server, smtp_user, smtp_password]):
         logger.error("SMTP credentials are not fully configured (SMTP_SERVER/USER/PASSWORD).")
@@ -76,25 +84,63 @@ async def send_verification_email(to_email: str, code: str) -> bool:
     message.attach(MIMEText(plain_text, "plain", "utf-8"))
     message.attach(MIMEText(_build_html_body(code), "html", "utf-8"))
 
+    use_tls, start_tls = _smtp_tls_mode(smtp_port)
+    tls_context = ssl.create_default_context()
+
+    logger.info(
+        "Sending verification email via %s:%s as %s to %s (use_tls=%s, start_tls=%s)",
+        smtp_server,
+        smtp_port,
+        smtp_user,
+        to_email,
+        use_tls,
+        start_tls,
+    )
+
+    smtp_client = aiosmtplib.SMTP(
+        hostname=smtp_server,
+        port=smtp_port,
+        username=smtp_user,
+        password=smtp_password,
+        timeout=30,
+        use_tls=use_tls,
+        start_tls=start_tls,
+        tls_context=tls_context,
+    )
+
     try:
-        tls_kwargs: dict[str, bool] = (
-            {"use_tls": True, "start_tls": False}
-            if smtp_port == 465
-            else {"use_tls": False, "start_tls": True}
-        )
-        await aiosmtplib.send(
-            message,
-            hostname=smtp_server,
-            port=smtp_port,
-            username=smtp_user,
-            password=smtp_password,
-            **tls_kwargs,
-        )
+        await smtp_client.connect()
+        await smtp_client.login(smtp_user, smtp_password)
+        await smtp_client.send_message(message)
+        await smtp_client.quit()
         logger.info("Verification email sent to %s", to_email)
         return True
+    except aiosmtplib.SMTPAuthenticationError:
+        logger.exception(
+            "SMTP authentication failed for user=%s on %s:%s",
+            smtp_user,
+            smtp_server,
+            smtp_port,
+        )
+        return False
     except aiosmtplib.SMTPException:
-        logger.exception("SMTP error while sending verification email to %s", to_email)
+        logger.exception(
+            "SMTP error while sending verification email to %s via %s:%s",
+            to_email,
+            smtp_server,
+            smtp_port,
+        )
         return False
     except OSError:
-        logger.exception("Network error while sending verification email to %s", to_email)
+        logger.exception(
+            "Network error while connecting to SMTP %s:%s (host may block outbound SMTP)",
+            smtp_server,
+            smtp_port,
+        )
         return False
+    finally:
+        if smtp_client.is_connected:
+            try:
+                await smtp_client.quit()
+            except Exception:  # noqa: BLE001
+                pass
