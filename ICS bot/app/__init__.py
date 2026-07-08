@@ -1,0 +1,1 @@
+"""ICS FastAPI application package."""

@@ -1,10 +1,14 @@
-# Деплой на Amvera Cloud (https://cloud.amvera.ru)
-# Документация: https://docs.amvera.ru/applications/environments/python-pip.html
+# Этот файл оставлен для справки. Amvera читает amvera.yaml из КОРНЯ репозитория (../amvera.yaml).
+# Не добавляйте сюда skip_build — для Python pip это недопустимое поле.
 meta:
   environment: python
   toolchain:
     name: pip
     version: "3.12"
+
+build:
+  requirementsPath: requirements.txt
+  useCache: true
 
 run:
   command: uvicorn main:app --host 0.0.0.0 --port 5000

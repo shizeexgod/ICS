@@ -1,9 +1,15 @@
+# Amvera Cloud — деплой бэкенда из подпапки "ICS bot"
+# Документация: https://docs.amvera.ru/applications/environments/python-pip.html
 meta:
   environment: python
   toolchain:
     name: pip
-    version: 3.12
+    version: "3.12"
+
 build:
-  # Ничего больше не пиши в этой секции
+  requirementsPath: ICS bot/requirements.txt
+  useCache: true
+
 run:
-  command: uvicorn main:app --host 0.0.0.0 --port 80
+  command: sh -c "cd 'ICS bot' && uvicorn main:app --host 0.0.0.0 --port 5000"
+  containerPort: 5000
