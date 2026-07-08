@@ -67,6 +67,35 @@
     el.hidden = !msg;
   }
 
+  function setButtonLoading(btn, loading, loadingText) {
+    if (!btn) return;
+    if (loading) {
+      if (!btn.dataset.defaultHtml) {
+        btn.dataset.defaultHtml = btn.innerHTML;
+      }
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      btn.innerHTML = loadingText;
+      return;
+    }
+    btn.disabled = false;
+    btn.removeAttribute("aria-busy");
+    if (btn.dataset.defaultHtml) {
+      btn.innerHTML = btn.dataset.defaultHtml;
+    }
+  }
+
+  function formatApiError(message) {
+    const map = {
+      "Failed to store verification code.": "Не удалось сохранить код. Проверьте, что в Supabase выполнены миграции 004 и 005.",
+      "Failed to send verification email.": "Не удалось отправить письмо. Проверьте SMTP на Amvera.",
+      "Email delivery is not configured.": "Почта не настроена на сервере (SMTP).",
+      "Invalid code.": "Неверный код.",
+      "Code expired. Request a new one.": "Код истёк. Запросите новый.",
+    };
+    return map[message] || message;
+  }
+
   function showStep(step) {
     [stepRegister, stepVerify, stepDashboard].forEach((s) => {
       s.hidden = s !== step;
@@ -139,7 +168,7 @@
     pendingEmail = (fd.get("email") || "").toString().trim().toLowerCase();
     pendingPhone = (fd.get("phone") || "").toString().trim();
     const btn = registerForm.querySelector("button[type=submit]");
-    btn.disabled = true;
+    setButtonLoading(btn, true, "Отправка…");
 
     try {
       const payload = {
@@ -167,9 +196,9 @@
       showError(verifyError, "");
       showStep(stepVerify);
     } catch (err) {
-      showError(registerError, err.message);
+      showError(registerError, formatApiError(err.message));
     } finally {
-      btn.disabled = false;
+      setButtonLoading(btn, false);
     }
   });
 
@@ -178,7 +207,7 @@
     showError(verifyError, "");
     const code = new FormData(verifyForm).get("code").toString().trim();
     const btn = verifyForm.querySelector("button[type=submit]");
-    btn.disabled = true;
+    setButtonLoading(btn, true, "Проверка…");
 
     try {
       const data = await apiFetch("/api/v1/auth/verify-code", {
@@ -196,9 +225,9 @@
       showStep(stepDashboard);
       loadBookings();
     } catch (err) {
-      showError(verifyError, err.message);
+      showError(verifyError, formatApiError(err.message));
     } finally {
-      btn.disabled = false;
+      setButtonLoading(btn, false);
     }
   });
 
