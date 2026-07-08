@@ -377,16 +377,20 @@
     <!-- Шаг 1: регистрация / вход -->
     <div class="cabinet__step" id="cabinetStepRegister">
       <span class="cabinet__eyebrow">Личный кабинет</span>
-      <h2 class="cabinet__title" id="cabinetTitle">Вход по номеру телефона</h2>
-      <p class="cabinet__desc">Укажите имя и телефон — мы отправим одноразовый код для входа.</p>
+      <h2 class="cabinet__title" id="cabinetTitle">Вход по email</h2>
+      <p class="cabinet__desc">Укажите имя и email — мы отправим одноразовый код для входа.</p>
       <form class="cabinet__form" id="registerForm">
         <label class="cabinet__field">
           <span>Имя</span>
           <input type="text" name="name" autocomplete="name" placeholder="Анна Иванова" required minlength="2">
         </label>
         <label class="cabinet__field">
-          <span>Телефон</span>
-          <input type="tel" name="phone" autocomplete="tel" placeholder="+7 999 123-45-67" required>
+          <span>Email</span>
+          <input type="email" name="email" autocomplete="email" placeholder="anna@example.com" required>
+        </label>
+        <label class="cabinet__field">
+          <span>Телефон <em class="cabinet__optional">необязательно</em></span>
+          <input type="tel" name="phone" autocomplete="tel" placeholder="+7 999 123-45-67">
         </label>
         <p class="cabinet__error" id="registerError" hidden></p>
         <button type="submit" class="btn btn--primary cabinet__submit">
@@ -399,17 +403,17 @@
     <!-- Шаг 2: подтверждение OTP -->
     <div class="cabinet__step" id="cabinetStepVerify" hidden>
       <span class="cabinet__eyebrow">Подтверждение</span>
-      <h2 class="cabinet__title">Введите код из SMS</h2>
-      <p class="cabinet__desc">Код отправлен на <strong id="verifyPhoneDisplay"></strong></p>
+      <h2 class="cabinet__title">Введите код из письма</h2>
+      <p class="cabinet__desc">Код отправлен на <strong id="verifyEmailDisplay"></strong></p>
       <p class="cabinet__dev-hint" id="verifyDevHint" hidden></p>
       <form class="cabinet__form" id="verifyForm">
         <label class="cabinet__field">
-          <span>Код из SMS</span>
-          <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required pattern="[0-9]{4,6}" maxlength="6">
+          <span>Код из email</span>
+          <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="1234" required pattern="[0-9]{4}" maxlength="4">
         </label>
         <p class="cabinet__error" id="verifyError" hidden></p>
         <button type="submit" class="btn btn--primary cabinet__submit">Войти</button>
-        <button type="button" class="btn btn--ghost cabinet__back" id="backToRegister">Изменить номер</button>
+        <button type="button" class="btn btn--ghost cabinet__back" id="backToRegister">Изменить email</button>
       </form>
     </div>
 

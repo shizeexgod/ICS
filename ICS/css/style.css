@@ -974,6 +974,11 @@ body.cabinet-open .footer {
   font-weight: 600;
   color: var(--text-dim);
 }
+.cabinet__optional {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.65;
+}
 .cabinet__field input {
   width: 100%;
   padding: 14px 16px;

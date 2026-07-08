@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.core.config import settings
 from app.core.db import supabase
 from app.schemas.auth import (
-    EmailRequest,
+    SendCodeRequest,
     SendCodeResponse,
     UserOut,
     VerifyCodeRequest,
@@ -33,8 +33,9 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post("/send-code", response_model=SendCodeResponse)
-async def send_code(payload: EmailRequest) -> SendCodeResponse:
-    """Generate a 4-digit code, store it, and email it to the user."""
+@router.post("/register", response_model=SendCodeResponse, include_in_schema=True)
+async def send_code(payload: SendCodeRequest) -> SendCodeResponse:
+    """Generate a 4-digit code, store profile draft, and email the code."""
     email = normalize_email(str(payload.email))
     code = generate_email_code()
     expires_at = email_code_expiry().isoformat()
@@ -43,7 +44,13 @@ async def send_code(payload: EmailRequest) -> SendCodeResponse:
         result = await (
             supabase.table("email_verifications")
             .upsert(
-                {"email": email, "code": code, "expires_at": expires_at},
+                {
+                    "email": email,
+                    "code": code,
+                    "expires_at": expires_at,
+                    "name": payload.name,
+                    "phone": payload.phone,
+                },
                 on_conflict="email",
             )
             .execute_async()
@@ -97,7 +104,7 @@ async def verify_code(payload: VerifyCodeRequest) -> VerifyCodeResponse:
     try:
         result = await (
             supabase.table("email_verifications")
-            .select("code", "expires_at")
+            .select("code", "expires_at", "name", "phone")
             .eq("email", email)
             .execute_async()
         )
@@ -118,6 +125,8 @@ async def verify_code(payload: VerifyCodeRequest) -> VerifyCodeResponse:
     record = rows[0]
     stored_code = record.get("code")
     expires_raw = record.get("expires_at")
+    profile_name = record.get("name")
+    profile_phone = record.get("phone")
 
     if stored_code != payload.code:
         raise HTTPException(
@@ -156,11 +165,40 @@ async def verify_code(payload: VerifyCodeRequest) -> VerifyCodeResponse:
 
     if users:
         user_row = users[0]
+        try:
+            await (
+                supabase.table("users")
+                .upsert(
+                    {
+                        "id": user_row["id"],
+                        "email": email,
+                        "name": profile_name or user_row.get("name"),
+                        "phone": profile_phone or user_row.get("phone"),
+                        "role": user_row.get("role") or "client",
+                    },
+                    on_conflict="email",
+                )
+                .execute_async()
+            )
+            user_result = await (
+                supabase.table("users").select("*").eq("email", email).execute_async()
+            )
+            users = user_result.data or [user_row]
+            user_row = users[0]
+        except Exception:
+            logger.exception("Failed to update profile for email=%s", email)
     else:
         try:
             await (
                 supabase.table("users")
-                .insert({"email": email, "role": "client"})
+                .insert(
+                    {
+                        "email": email,
+                        "name": profile_name,
+                        "phone": profile_phone,
+                        "role": "client",
+                    }
+                )
                 .execute_async()
             )
             user_result = await (
@@ -201,6 +239,8 @@ async def verify_code(payload: VerifyCodeRequest) -> VerifyCodeResponse:
     user_out = UserOut(
         id=user_id,
         email=email,
+        name=user_row.get("name"),
+        phone=user_row.get("phone"),
         tg_chat_id=user_row.get("tg_chat_id"),
         company_id=(
             uuid.UUID(str(user_row["company_id"]))

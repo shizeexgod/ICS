@@ -1,10 +1,11 @@
 /**
- * Личный кабинет: анимированный оверлей с OTP-авторизацией и списком записей.
- * API: POST /api/v1/auth/login, POST /api/v1/auth/verify,
+ * Личный кабинет: email OTP-авторизация и список записей.
+ * API: POST /api/v1/auth/send-code, POST /api/v1/auth/verify-code,
  *      GET /api/v1/bookings/my, POST /api/v1/bookings/:id/cancel
  */
 (function initCabinet() {
   const TOKEN_KEY = "ics:auth_token";
+  const REFRESH_KEY = "ics:auth_refresh";
   const USER_KEY = "ics:auth_user";
 
   const cabinet = document.getElementById("cabinet");
@@ -18,7 +19,7 @@
   const verifyForm = document.getElementById("verifyForm");
   const registerError = document.getElementById("registerError");
   const verifyError = document.getElementById("verifyError");
-  const verifyPhoneDisplay = document.getElementById("verifyPhoneDisplay");
+  const verifyEmailDisplay = document.getElementById("verifyEmailDisplay");
   const verifyDevHint = document.getElementById("verifyDevHint");
   const backToRegister = document.getElementById("backToRegister");
   const logoutBtn = document.getElementById("cabinetLogout");
@@ -27,8 +28,9 @@
   const dashboardUserName = document.getElementById("dashboardUserName");
   const nav = document.getElementById("nav");
 
-  let pendingPhone = "";
+  let pendingEmail = "";
   let pendingName = "";
+  let pendingPhone = "";
 
   function apiBase() {
     return (window.ICS_API_BASE || "").replace(/\/$/, "");
@@ -38,13 +40,17 @@
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  function setSession(token, user) {
+  function setSession(token, refreshToken, user) {
     localStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_KEY, refreshToken);
+    }
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
   }
 
@@ -77,7 +83,7 @@
     if (token) {
       showStep(stepDashboard);
       const user = getStoredUser();
-      dashboardUserName.textContent = user?.name || "клиент";
+      dashboardUserName.textContent = user?.name || user?.email || "клиент";
       loadBookings();
     } else {
       showStep(stepRegister);
@@ -95,14 +101,25 @@
   async function apiFetch(path, options = {}) {
     const base = apiBase();
     if (!base) {
-      throw new Error("API не настроен. Локально: js/config.js. На Vercel: переменная ICS_API_BASE.");
+      throw new Error(
+        "API не настроен. Локально: js/config.js. На Vercel: переменная ICS_API_BASE (URL Amvera)."
+      );
     }
     const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
     const token = getToken();
     if (token && !headers.Authorization) {
       headers.Authorization = `Bearer ${token}`;
     }
-    const res = await fetch(`${base}${path}`, { ...options, headers });
+
+    let res;
+    try {
+      res = await fetch(`${base}${path}`, { ...options, headers });
+    } catch {
+      throw new Error(
+        "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
+      );
+    }
+
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const detail = data.detail;
@@ -119,18 +136,28 @@
     showError(registerError, "");
     const fd = new FormData(registerForm);
     pendingName = (fd.get("name") || "").toString().trim();
+    pendingEmail = (fd.get("email") || "").toString().trim().toLowerCase();
     pendingPhone = (fd.get("phone") || "").toString().trim();
     const btn = registerForm.querySelector("button[type=submit]");
     btn.disabled = true;
 
     try {
-      const data = await apiFetch("/api/v1/auth/login", {
+      const payload = {
+        email: pendingEmail,
+        name: pendingName,
+      };
+      if (pendingPhone) {
+        payload.phone = pendingPhone;
+      }
+
+      const data = await apiFetch("/api/v1/auth/send-code", {
         method: "POST",
-        body: JSON.stringify({ phone: pendingPhone, name: pendingName }),
+        body: JSON.stringify(payload),
       });
-      verifyPhoneDisplay.textContent = pendingPhone;
+
+      verifyEmailDisplay.textContent = pendingEmail;
       if (data.dev_code && verifyDevHint) {
-        verifyDevHint.textContent = `Режим разработки: код ${data.dev_code} (SMS не настроен)`;
+        verifyDevHint.textContent = `Режим разработки: код ${data.dev_code} (SMTP не настроен)`;
         verifyDevHint.hidden = false;
       } else if (verifyDevHint) {
         verifyDevHint.hidden = true;
@@ -154,12 +181,18 @@
     btn.disabled = true;
 
     try {
-      const data = await apiFetch("/api/v1/auth/verify", {
+      const data = await apiFetch("/api/v1/auth/verify-code", {
         method: "POST",
-        body: JSON.stringify({ phone: pendingPhone, code }),
+        body: JSON.stringify({ email: pendingEmail, code }),
       });
-      setSession(data.access_token, { name: data.name || pendingName, phone: pendingPhone });
-      dashboardUserName.textContent = data.name || pendingName;
+
+      const user = data.user || {};
+      setSession(data.access_token, data.refresh_token, {
+        name: user.name || pendingName,
+        email: user.email || pendingEmail,
+        phone: user.phone || pendingPhone || null,
+      });
+      dashboardUserName.textContent = user.name || pendingName;
       showStep(stepDashboard);
       loadBookings();
     } catch (err) {
@@ -226,9 +259,11 @@
           </div>
           <div class="cabinet__booking-meta">
             <span class="cabinet__status cabinet__status--${b.status}">${statusLabel(b.status)}</span>
-            ${b.status !== "cancelled" && b.status !== "completed"
-              ? `<button type="button" class="cabinet__cancel" data-id="${b.id}">Отменить</button>`
-              : ""}
+            ${
+              b.status !== "cancelled" && b.status !== "completed"
+                ? `<button type="button" class="cabinet__cancel" data-id="${b.id}">Отменить</button>`
+                : ""
+            }
           </div>`;
         bookingsList.appendChild(card);
       });

@@ -21,6 +21,8 @@ class User(Base):
         PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     tg_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     company_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
