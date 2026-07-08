@@ -144,8 +144,47 @@
         "Почта не настроена на сервере (SMTP).",
       "Invalid code.": "Неверный код.",
       "Code expired. Request a new one.": "Код истёк. Запросите новый.",
+      "Company is already configured for this account.":
+        "Компания уже настроена для этого аккаунта.",
+      "Company is not configured yet.": "Сначала укажите данные предприятия.",
+      "Failed to create company. Please try again.":
+        "Не удалось создать компанию. Попробуйте ещё раз.",
     };
     return map[message] || message;
+  }
+
+  function needsOnboarding(user) {
+    return !user?.company_id;
+  }
+
+  function profileFromCompany(company) {
+    return {
+      companyName: company.name,
+      ownerEmail: company.owner_email,
+      apiKey: company.api_key,
+      createdAt: company.created_at,
+    };
+  }
+
+  function mapSessionUser(user) {
+    return {
+      name: user.name,
+      email: user.email,
+      phone: user.phone || null,
+      role: user.role || "client",
+      company_id: user.company_id || null,
+    };
+  }
+
+  async function loadCompanyProfile() {
+    try {
+      const company = await apiFetch("/api/v1/company/me");
+      const profile = profileFromCompany(company);
+      saveCompanyProfile(profile);
+      return profile;
+    } catch {
+      return null;
+    }
   }
 
   function setPanelWide(wide) {
@@ -201,9 +240,8 @@
     }
   }
 
-  function enterApp(user) {
+  function enterApp(user, profile) {
     syncUserUi(user);
-    const profile = getCompanyProfile();
     if (profile) {
       syncCompanyUi(profile);
     }
@@ -211,7 +249,7 @@
     switchView(activeView);
   }
 
-  function openCabinet() {
+  async function openCabinet() {
     document.body.classList.add("cabinet-open");
     cabinet.classList.add("is-open");
     cabinet.setAttribute("aria-hidden", "false");
@@ -228,13 +266,14 @@
     const user = getStoredUser();
     syncUserUi(user);
 
-    if (!getCompanyProfile()) {
+    if (needsOnboarding(user)) {
       onboardingOwnerEmail.value = user?.email || "";
       showStep(stepOnboarding);
       return;
     }
 
-    enterApp(user);
+    const profile = getCompanyProfile() || (await loadCompanyProfile());
+    enterApp(user, profile);
   }
 
   function closeCabinet() {
@@ -327,21 +366,22 @@
       });
 
       const user = data.user || {};
-      const sessionUser = {
+      const sessionUser = mapSessionUser({
         name: user.name || pendingName,
         email: user.email || pendingEmail,
         phone: user.phone || pendingPhone || null,
         role: user.role || "client",
         company_id: user.company_id || null,
-      };
+      });
       setSession(data.access_token, data.refresh_token, sessionUser);
 
-      if (!getCompanyProfile()) {
+      if (needsOnboarding(sessionUser)) {
         onboardingOwnerEmail.value = sessionUser.email || "";
         onboardingCompanyName.value = "";
         showStep(stepOnboarding);
       } else {
-        enterApp(sessionUser);
+        const profile = getCompanyProfile() || (await loadCompanyProfile());
+        enterApp(sessionUser, profile);
       }
     } catch (err) {
       showError(verifyError, formatApiError(err.message));
@@ -350,25 +390,39 @@
     }
   });
 
-  onboardingForm.addEventListener("submit", (e) => {
+  onboardingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     showError(onboardingError, "");
     const fd = new FormData(onboardingForm);
     const companyName = (fd.get("company_name") || "").toString().trim();
     const ownerEmail = (fd.get("owner_email") || "").toString().trim().toLowerCase();
-    if (!companyName || !ownerEmail) {
-      showError(onboardingError, "Заполните все поля.");
+    if (!companyName) {
+      showError(onboardingError, "Укажите название предприятия.");
       return;
     }
 
-    const profile = {
-      companyName,
-      ownerEmail,
-      apiKey: generateApiKey(),
-      createdAt: new Date().toISOString(),
-    };
-    saveCompanyProfile(profile);
-    enterApp(getStoredUser());
+    const btn = onboardingForm.querySelector("button[type=submit]");
+    setButtonLoading(btn, true, "Создание…");
+
+    try {
+      const data = await apiFetch("/api/v1/company/setup", {
+        method: "POST",
+        body: JSON.stringify({
+          company_name: companyName,
+          owner_email: ownerEmail || undefined,
+        }),
+      });
+
+      const sessionUser = mapSessionUser(data.user);
+      setSession(data.access_token, data.refresh_token, sessionUser);
+      const profile = profileFromCompany(data.company);
+      saveCompanyProfile(profile);
+      enterApp(sessionUser, profile);
+    } catch (err) {
+      showError(onboardingError, formatApiError(err.message));
+    } finally {
+      setButtonLoading(btn, false);
+    }
   });
 
   settingsForm.addEventListener("submit", (e) => {
@@ -411,6 +465,7 @@
 
   function handleLogout() {
     clearSession();
+    localStorage.removeItem(COMPANY_KEY);
     activeView = "overview";
     showStep(stepRegister);
     registerForm.reset();

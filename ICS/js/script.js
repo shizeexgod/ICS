@@ -71,12 +71,42 @@ const Settings = (() => {
 })();
 
 /* ============ Mobile nav ============ */
-const burger = document.getElementById("burger");
-const nav = document.getElementById("nav");
-burger.addEventListener("click", () => nav.classList.toggle("open"));
-nav.addEventListener("click", (e) => {
-  if (e.target.closest("a")) nav.classList.remove("open");
-});
+(function initMobileNav() {
+  const burger = document.getElementById("burger");
+  const nav = document.getElementById("nav");
+  const header = document.querySelector(".header");
+  if (!burger || !nav) return;
+
+  function setNavOpen(open) {
+    nav.classList.toggle("open", open);
+    header?.classList.toggle("is-nav-open", open);
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
+    burger.setAttribute("aria-controls", "nav");
+  }
+
+  burger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setNavOpen(!nav.classList.contains("open"));
+  });
+
+  nav.addEventListener("click", (e) => {
+    if (e.target.closest("a, .nav__cabinet")) setNavOpen(false);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!nav.classList.contains("open")) return;
+    if (e.target.closest(".header")) return;
+    setNavOpen(false);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && nav.classList.contains("open")) setNavOpen(false);
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 980 && nav.classList.contains("open")) setNavOpen(false);
+  });
+})();
 
 /* ============ Scroll progress bar ============ */
 const progressBar = document.getElementById("scrollProgress");

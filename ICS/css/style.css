@@ -176,6 +176,9 @@ h1, h2, h3, .brand__name, .nav a, .btn, .steps__num, .stat__num {
   transform: translateZ(0);
   overflow: hidden;
 }
+.header.is-nav-open {
+  overflow: visible;
+}
 
 .header__inner {
   display: flex;
