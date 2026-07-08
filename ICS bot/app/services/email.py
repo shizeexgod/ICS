@@ -77,13 +77,18 @@ async def send_verification_email(to_email: str, code: str) -> bool:
     message.attach(MIMEText(_build_html_body(code), "html", "utf-8"))
 
     try:
+        tls_kwargs: dict[str, bool] = (
+            {"use_tls": True, "start_tls": False}
+            if smtp_port == 465
+            else {"use_tls": False, "start_tls": True}
+        )
         await aiosmtplib.send(
             message,
             hostname=smtp_server,
             port=smtp_port,
             username=smtp_user,
             password=smtp_password,
-            start_tls=True,
+            **tls_kwargs,
         )
         logger.info("Verification email sent to %s", to_email)
         return True
