@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-import ssl
-
-import aiosmtplib
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -51,11 +50,27 @@ def _build_html_body(code: str) -> str:
 </html>"""
 
 
-def _smtp_tls_mode(port: int) -> tuple[bool, bool]:
-    """Return (use_tls, start_tls) for Yandex-compatible SMTP ports."""
-    if port == 465:
-        return True, False
-    return False, True
+def _send_via_smtp(
+    *,
+    smtp_server: str,
+    smtp_port: int,
+    smtp_user: str,
+    smtp_password: str,
+    message: MIMEMultipart,
+) -> None:
+    """Blocking SMTP send — SSL on 465, STARTTLS on other ports."""
+    if smtp_port == 465:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(message)
+        return
+
+    with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(message)
 
 
 async def send_verification_email(to_email: str, code: str) -> bool:
@@ -70,7 +85,7 @@ async def send_verification_email(to_email: str, code: str) -> bool:
         return False
 
     try:
-        smtp_port = int(smtp_port_raw)
+        preferred_port = int(smtp_port_raw)
     except ValueError:
         logger.error("Invalid SMTP_PORT value: %r", smtp_port_raw)
         return False
@@ -84,63 +99,48 @@ async def send_verification_email(to_email: str, code: str) -> bool:
     message.attach(MIMEText(plain_text, "plain", "utf-8"))
     message.attach(MIMEText(_build_html_body(code), "html", "utf-8"))
 
-    use_tls, start_tls = _smtp_tls_mode(smtp_port)
-    tls_context = ssl.create_default_context()
+    alt_port = 587 if preferred_port == 465 else 465
+    ports_to_try = [preferred_port]
+    if alt_port not in ports_to_try:
+        ports_to_try.append(alt_port)
 
-    logger.info(
-        "Sending verification email via %s:%s as %s to %s (use_tls=%s, start_tls=%s)",
-        smtp_server,
-        smtp_port,
-        smtp_user,
-        to_email,
-        use_tls,
-        start_tls,
-    )
-
-    smtp_client = aiosmtplib.SMTP(
-        hostname=smtp_server,
-        port=smtp_port,
-        username=smtp_user,
-        password=smtp_password,
-        timeout=30,
-        use_tls=use_tls,
-        start_tls=start_tls,
-        tls_context=tls_context,
-    )
-
-    try:
-        await smtp_client.connect()
-        await smtp_client.login(smtp_user, smtp_password)
-        await smtp_client.send_message(message)
-        await smtp_client.quit()
-        logger.info("Verification email sent to %s", to_email)
-        return True
-    except aiosmtplib.SMTPAuthenticationError:
-        logger.exception(
-            "SMTP authentication failed for user=%s on %s:%s",
+    last_error: Exception | None = None
+    for smtp_port in ports_to_try:
+        logger.info(
+            "Sending verification email via %s:%s as %s to %s",
+            smtp_server,
+            smtp_port,
             smtp_user,
-            smtp_server,
-            smtp_port,
-        )
-        return False
-    except aiosmtplib.SMTPException:
-        logger.exception(
-            "SMTP error while sending verification email to %s via %s:%s",
             to_email,
-            smtp_server,
-            smtp_port,
         )
-        return False
-    except OSError:
-        logger.exception(
-            "Network error while connecting to SMTP %s:%s (host may block outbound SMTP)",
-            smtp_server,
-            smtp_port,
-        )
-        return False
-    finally:
-        if smtp_client.is_connected:
-            try:
-                await smtp_client.quit()
-            except Exception:  # noqa: BLE001
-                pass
+        try:
+            await asyncio.to_thread(
+                _send_via_smtp,
+                smtp_server=smtp_server,
+                smtp_port=smtp_port,
+                smtp_user=smtp_user,
+                smtp_password=smtp_password,
+                message=message,
+            )
+            logger.info("Verification email sent to %s via port %s", to_email, smtp_port)
+            return True
+        except smtplib.SMTPAuthenticationError:
+            logger.exception(
+                "SMTP authentication failed for user=%s on %s:%s",
+                smtp_user,
+                smtp_server,
+                smtp_port,
+            )
+            return False
+        except (smtplib.SMTPException, OSError) as exc:
+            last_error = exc
+            logger.exception(
+                "SMTP attempt failed on %s:%s for %s",
+                smtp_server,
+                smtp_port,
+                to_email,
+            )
+
+    if last_error is not None:
+        logger.error("All SMTP attempts failed for %s: %s", to_email, last_error)
+    return False
