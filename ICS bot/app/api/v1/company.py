@@ -1,26 +1,50 @@
-"""Company onboarding and tenant profile endpoints."""
+"""Company onboarding, profile, stats, appointments (admin JWT)."""
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import secrets
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.core.security import get_current_user
+from app.core.security import get_current_admin, get_current_admin_company, get_current_user
+from app.models.appointment import Appointment, AppointmentStatus
+from app.models.client import Client
 from app.models.company import Company
+from app.models.company_manager import CompanyManager
 from app.models.user import User
+from app.schemas.appointment import (
+    AppointmentCreateRequest,
+    AppointmentCreateResponse,
+    AppointmentListItem,
+    AppointmentStatusUpdateRequest,
+)
 from app.schemas.auth import UserOut
-from app.schemas.company import CompanyOut, CompanySetupRequest, CompanySetupResponse
+from app.schemas.company import (
+    CompanyOut,
+    CompanySetupRequest,
+    CompanySetupResponse,
+    CompanyStatsOut,
+    CompanyTelegramOut,
+    CompanyUpdateRequest,
+    TelegramManagerOut,
+    UserProfileUpdateRequest,
+)
 from app.services.auth_service import create_access_token, create_refresh_token, normalize_email
+from app.services.booking_service import create_company_appointment
+from app.services.plan_service import company_plan_out, init_trial_fields
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/company", tags=["company"])
+
+_INACTIVE = (AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)
 
 
 def _generate_api_key() -> str:
@@ -34,6 +58,7 @@ def _company_out(company: Company) -> CompanyOut:
         owner_email=company.owner_email,
         api_key=company.api_key,
         created_at=company.created_at,
+        plan=company_plan_out(company),
     )
 
 
@@ -60,10 +85,7 @@ async def setup_company(
     result = await session.execute(select(User).where(User.id == current_user.id))
     user = result.scalar_one_or_none()
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found.",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
 
     if user.company_id is not None:
         raise HTTPException(
@@ -73,11 +95,8 @@ async def setup_company(
 
     owner_email = normalize_email(str(payload.owner_email or user.email))
     api_key = _generate_api_key()
-    company = Company(
-        name=payload.company_name,
-        owner_email=owner_email,
-        api_key=api_key,
-    )
+    company = Company(name=payload.company_name, owner_email=owner_email, api_key=api_key)
+    init_trial_fields(company)
     session.add(company)
 
     try:
@@ -89,11 +108,7 @@ async def setup_company(
         await session.refresh(user)
     except IntegrityError:
         await session.rollback()
-        logger.exception(
-            "Failed to create company for user_id=%s name=%r",
-            user.id,
-            payload.company_name,
-        )
+        logger.exception("Failed to create company for user_id=%s", user.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create company. Please try again.",
@@ -102,12 +117,7 @@ async def setup_company(
     access_token = create_access_token(user_id=user.id, email=user.email, role=user.role)
     refresh_token = create_refresh_token(user_id=user.id, email=user.email)
 
-    logger.info(
-        "Company onboarded company_id=%s user_id=%s email=%s",
-        company.id,
-        user.id,
-        user.email,
-    )
+    logger.info("Company onboarded company_id=%s user_id=%s", company.id, user.id)
     return CompanySetupResponse(
         company=_company_out(company),
         user=_user_out(user),
@@ -118,24 +128,201 @@ async def setup_company(
 
 @router.get("/me", response_model=CompanyOut)
 async def get_my_company(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
 ) -> CompanyOut:
-    """Return the authenticated user's company profile."""
-    if current_user.company_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company is not configured yet.",
-        )
-
-    result = await session.execute(
-        select(Company).where(Company.id == current_user.company_id)
-    )
-    company = result.scalar_one_or_none()
-    if company is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found.",
-        )
-
+    """Return the authenticated admin's company profile."""
     return _company_out(company)
+
+
+@router.patch("/me", response_model=CompanyOut)
+async def update_my_company(
+    payload: CompanyUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> CompanyOut:
+    """Update company name and owner email."""
+    if payload.name is not None:
+        company.name = payload.name
+    if payload.owner_email is not None:
+        company.owner_email = normalize_email(str(payload.owner_email))
+    await session.commit()
+    await session.refresh(company)
+    return _company_out(company)
+
+
+@router.patch("/profile", response_model=UserOut)
+async def update_my_profile(
+    payload: UserProfileUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    admin: User = Depends(get_current_admin),
+) -> UserOut:
+    """Update admin display name and phone."""
+    result = await session.execute(select(User).where(User.id == admin.id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
+    if payload.name is not None:
+        user.name = payload.name.strip()
+    if payload.phone is not None:
+        user.phone = payload.phone.strip() or None
+    await session.commit()
+    await session.refresh(user)
+    return _user_out(user)
+
+
+@router.get("/stats", response_model=CompanyStatsOut)
+async def get_company_stats(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> CompanyStatsOut:
+    """Dashboard metrics for the admin overview."""
+    today = dt.date.today()
+    today_result = await session.execute(
+        select(func.count(Appointment.id)).where(
+            Appointment.company_id == company.id,
+            Appointment.appointment_date == today,
+            Appointment.status.notin_(_INACTIVE),
+        )
+    )
+    appointments_today = today_result.scalar() or 0
+
+    clients_result = await session.execute(
+        select(func.count(func.distinct(Appointment.client_id))).where(
+            Appointment.company_id == company.id,
+            Appointment.status.notin_(_INACTIVE),
+        )
+    )
+    active_clients = clients_result.scalar() or 0
+
+    reminders_week = company.reminders_used
+    try:
+        week_ago = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)
+        reminders_result = await session.execute(
+            text(
+                """
+                SELECT COUNT(*) FROM public.notifications n
+                JOIN public.appointments a ON a.id = n.appointment_id
+                WHERE a.company_id = :company_id AND n.sent_at >= :week_ago
+                """
+            ),
+            {"company_id": str(company.id), "week_ago": week_ago},
+        )
+        reminders_week = reminders_result.scalar() or 0
+    except Exception:
+        logger.debug("notifications table unavailable; using reminders_used fallback")
+
+    return CompanyStatsOut(
+        appointments_today=appointments_today,
+        active_clients=active_clients,
+        reminders_week=reminders_week,
+    )
+
+
+@router.get("/telegram", response_model=CompanyTelegramOut)
+async def get_telegram_status(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> CompanyTelegramOut:
+    """Return Telegram manager bindings for this company."""
+    result = await session.execute(
+        select(CompanyManager.tg_chat_id).where(CompanyManager.company_id == company.id)
+    )
+    chat_ids = [row[0] for row in result.all()]
+    managers = [TelegramManagerOut(tg_chat_id=cid) for cid in chat_ids]
+    return CompanyTelegramOut(connected=len(managers) > 0, managers=managers)
+
+
+@router.get("/appointments", response_model=list[AppointmentListItem])
+async def list_company_appointments(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> list[AppointmentListItem]:
+    """List all appointments for the admin's company (JWT, no API key)."""
+    try:
+        query = (
+            select(Appointment, Client)
+            .join(Client, Appointment.client_id == Client.id)
+            .where(Appointment.company_id == company.id)
+            .order_by(Appointment.appointment_date.desc(), Appointment.appointment_time.desc())
+        )
+        result = await session.execute(query)
+        rows = result.all()
+    except Exception:
+        logger.exception("Failed to list appointments for company_id=%s", company.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load appointments.",
+        ) from None
+
+    return [
+        AppointmentListItem(
+            id=appointment.id,
+            client_name=client.full_name,
+            client_phone=client.phone,
+            service_name=appointment.service_name,
+            appointment_date=appointment.appointment_date,
+            appointment_time=appointment.appointment_time,
+            status=appointment.status,
+        )
+        for appointment, client in rows
+    ]
+
+
+@router.post(
+    "/appointments",
+    response_model=AppointmentCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_company_appointment_endpoint(
+    payload: AppointmentCreateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> AppointmentCreateResponse:
+    """Create a booking from the admin calendar."""
+    try:
+        client, appointment = await create_company_appointment(
+            session,
+            company=company,
+            full_name=payload.full_name,
+            phone=payload.phone,
+            service_name=payload.service_name,
+            appointment_date=payload.appointment_date,
+            appointment_time=payload.appointment_time,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to create appointment for company_id=%s", company.id)
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create appointment.",
+        ) from None
+
+    return AppointmentCreateResponse(
+        appointment_id=appointment.id,
+        client_id=client.id,
+    )
+
+
+@router.patch("/appointments/{appointment_id}/status")
+async def update_company_appointment_status(
+    appointment_id: uuid.UUID,
+    payload: AppointmentStatusUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> dict[str, str]:
+    """Update appointment status from the admin cabinet."""
+    result = await session.execute(
+        select(Appointment).where(
+            Appointment.id == appointment_id,
+            Appointment.company_id == company.id,
+        )
+    )
+    appointment = result.scalar_one_or_none()
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
+
+    appointment.status = payload.status
+    await session.commit()
+    return {"message": "Status updated successfully"}

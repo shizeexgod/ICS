@@ -449,7 +449,7 @@
             </span>
             <div class="cabinet-app__brand-text">
               <strong id="sidebarCompanyName">ICS</strong>
-              <span>кабинет</span>
+              <span id="sidebarPlanBadge" class="cabinet-app__plan-badge">Trial</span>
             </div>
           </div>
 
@@ -461,6 +461,10 @@
             <button type="button" class="cabinet-app__nav-btn" data-view="bookings">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3v3M17 3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
               Записи
+            </button>
+            <button type="button" class="cabinet-app__nav-btn" data-view="calendar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Календарь
             </button>
             <button type="button" class="cabinet-app__nav-btn" data-view="settings">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -496,18 +500,19 @@
           <!-- Главная -->
           <section class="cabinet-app__view is-active" data-view-panel="overview">
             <p class="cabinet-app__lead">Здравствуйте, <strong id="dashboardUserName">—</strong>. Здесь сводка по напоминаниям и подключению сервиса.</p>
+            <div class="cabinet-app__plan-banner" id="planBanner" hidden></div>
             <div class="cabinet-app__stats">
               <article class="cabinet-app__stat">
                 <span class="cabinet-app__stat-label">Записи сегодня</span>
-                <strong class="cabinet-app__stat-value">0</strong>
+                <strong class="cabinet-app__stat-value" id="statAppointmentsToday">0</strong>
               </article>
               <article class="cabinet-app__stat">
                 <span class="cabinet-app__stat-label">Активные клиенты</span>
-                <strong class="cabinet-app__stat-value">0</strong>
+                <strong class="cabinet-app__stat-value" id="statActiveClients">0</strong>
               </article>
               <article class="cabinet-app__stat">
                 <span class="cabinet-app__stat-label">Напоминания за неделю</span>
-                <strong class="cabinet-app__stat-value">0</strong>
+                <strong class="cabinet-app__stat-value" id="statRemindersWeek">0</strong>
               </article>
             </div>
             <div class="cabinet-app__cards">
@@ -539,6 +544,66 @@
             </div>
           </section>
 
+          <!-- Календарь -->
+          <section class="cabinet-app__view" data-view-panel="calendar" hidden>
+            <p class="cabinet-app__lead">Планируйте записи и смотрите расписание по дням.</p>
+            <div class="cabinet-calendar">
+              <div class="cabinet-calendar__main">
+                <div class="cabinet-calendar__head">
+                  <button type="button" class="cabinet-calendar__nav-btn" id="calendarPrevMonth" aria-label="Предыдущий месяц">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <h3 class="cabinet-calendar__month" id="calendarMonthLabel">—</h3>
+                  <button type="button" class="cabinet-calendar__nav-btn" id="calendarNextMonth" aria-label="Следующий месяц">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18 15 12 9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+                <div class="cabinet-calendar__weekdays" aria-hidden="true">
+                  <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+                </div>
+                <div class="cabinet-calendar__grid" id="calendarGrid" role="grid" aria-label="Календарь записей"></div>
+              </div>
+
+              <aside class="cabinet-calendar__side">
+                <div class="cabinet-calendar__day-panel">
+                  <h3 class="cabinet-calendar__day-title" id="calendarDayTitle">—</h3>
+                  <div class="cabinet-calendar__day-list" id="calendarDayList">
+                    <p class="cabinet-app__empty-inline">Выберите день в календаре.</p>
+                  </div>
+                </div>
+
+                <form class="cabinet-calendar__form" id="calendarCreateForm">
+                  <h3>Новая запись</h3>
+                  <label class="cabinet__field">
+                    <span>Имя клиента</span>
+                    <input type="text" name="full_name" id="calendarClientName" required minlength="1" placeholder="Анна Иванова">
+                  </label>
+                  <label class="cabinet__field">
+                    <span>Телефон</span>
+                    <input type="tel" name="phone" id="calendarClientPhone" required placeholder="+7 999 123-45-67">
+                  </label>
+                  <label class="cabinet__field">
+                    <span>Услуга</span>
+                    <input type="text" name="service_name" id="calendarServiceName" required minlength="1" placeholder="Стрижка">
+                  </label>
+                  <div class="cabinet-calendar__form-row">
+                    <label class="cabinet__field">
+                      <span>Дата</span>
+                      <input type="date" name="appointment_date" id="calendarDate" required>
+                    </label>
+                    <label class="cabinet__field">
+                      <span>Время</span>
+                      <input type="time" name="appointment_time" id="calendarTime" required>
+                    </label>
+                  </div>
+                  <p class="cabinet__error" id="calendarCreateError" hidden></p>
+                  <p class="cabinet-app__saved" id="calendarCreateSuccess" hidden>Запись создана.</p>
+                  <button type="submit" class="btn btn--primary">Создать запись</button>
+                </form>
+              </aside>
+            </div>
+          </section>
+
           <!-- Настройки -->
           <section class="cabinet-app__view" data-view-panel="settings" hidden>
             <form class="cabinet-app__settings" id="settingsForm">
@@ -565,7 +630,7 @@
                 </label>
               </div>
               <p class="cabinet__error" id="settingsError" hidden></p>
-              <p class="cabinet-app__saved" id="settingsSaved" hidden>Настройки сохранены локально (демо).</p>
+              <p class="cabinet-app__saved" id="settingsSaved" hidden>Настройки сохранены.</p>
               <button type="submit" class="btn btn--primary">Сохранить</button>
               <button type="button" class="btn btn--ghost cabinet-app__logout-alt" id="cabinetLogoutAlt">Выйти из аккаунта</button>
             </form>
@@ -591,7 +656,9 @@
               </article>
               <article class="cabinet-app__card">
                 <h3>Подключённые чаты</h3>
-                <p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-админов.</p>
+                <div id="telegramManagersList">
+                  <p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-админов.</p>
+                </div>
               </article>
             </div>
           </section>

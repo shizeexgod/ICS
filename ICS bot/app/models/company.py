@@ -6,7 +6,7 @@ import datetime as dt
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -34,6 +34,18 @@ class Company(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     owner_email: Mapped[str] = mapped_column(String(255), nullable=False)
     api_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    plan: Mapped[str] = mapped_column(String(20), nullable=False, default="trial", index=True)
+    trial_ends_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    subscription_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active"
+    )
+    reminders_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reminders_period_start: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    pro_price_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=4000)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

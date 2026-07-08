@@ -143,4 +143,24 @@ async def get_current_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required.",
         )
+    if user.company_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin account is not linked to a company.",
+        )
     return user
+
+
+async def get_current_admin_company(
+    admin: User = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_db_session),
+) -> Company:
+    """FastAPI dependency: admin JWT → their tenant Company row."""
+    result = await session.execute(select(Company).where(Company.id == admin.company_id))
+    company = result.scalar_one_or_none()
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Company not found.",
+        )
+    return company

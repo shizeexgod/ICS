@@ -10,6 +10,7 @@
   const VIEW_META = {
     overview: { eyebrow: "Обзор", title: "Главная" },
     bookings: { eyebrow: "Записи", title: "Записи клиентов" },
+    calendar: { eyebrow: "Расписание", title: "Календарь" },
     settings: { eyebrow: "Настройки", title: "Настройки предприятия" },
     telegram: { eyebrow: "Интеграции", title: "Telegram" },
     templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
@@ -54,13 +55,35 @@
   const overviewApiKey = document.getElementById("overviewApiKey");
   const settingsApiKey = document.getElementById("settingsApiKey");
   const telegramApiKey = document.getElementById("telegramApiKey");
+  const telegramStatus = document.getElementById("telegramStatus");
+  const telegramManagersList = document.getElementById("telegramManagersList");
+  const statAppointmentsToday = document.getElementById("statAppointmentsToday");
+  const statActiveClients = document.getElementById("statActiveClients");
+  const statRemindersWeek = document.getElementById("statRemindersWeek");
+  const sidebarPlanBadge = document.getElementById("sidebarPlanBadge");
+  const planBanner = document.getElementById("planBanner");
   const nav = document.getElementById("nav");
   const cabinetNav = document.getElementById("cabinetNav");
+  const calendarGrid = document.getElementById("calendarGrid");
+  const calendarMonthLabel = document.getElementById("calendarMonthLabel");
+  const calendarDayTitle = document.getElementById("calendarDayTitle");
+  const calendarDayList = document.getElementById("calendarDayList");
+  const calendarPrevMonth = document.getElementById("calendarPrevMonth");
+  const calendarNextMonth = document.getElementById("calendarNextMonth");
+  const calendarCreateForm = document.getElementById("calendarCreateForm");
+  const calendarCreateError = document.getElementById("calendarCreateError");
+  const calendarCreateSuccess = document.getElementById("calendarCreateSuccess");
+  const calendarDate = document.getElementById("calendarDate");
+  const calendarTime = document.getElementById("calendarTime");
 
   let pendingEmail = "";
   let pendingName = "";
   let pendingPhone = "";
   let activeView = "overview";
+  let calendarMonth = new Date();
+  let calendarSelectedDate = toDateKey(new Date());
+  let calendarAppointments = [];
+  let calendarLoaded = false;
 
   function apiBase() {
     return (window.ICS_API_BASE || "").replace(/\/$/, "");
@@ -102,12 +125,6 @@
 
   function saveCompanyProfile(profile) {
     localStorage.setItem(COMPANY_KEY, JSON.stringify(profile));
-  }
-
-  function generateApiKey() {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   }
 
   function showError(el, msg) {
@@ -163,7 +180,76 @@
       ownerEmail: company.owner_email,
       apiKey: company.api_key,
       createdAt: company.created_at,
+      plan: company.plan || null,
     };
+  }
+
+  function syncPlanUi(plan) {
+    if (!plan || !sidebarPlanBadge) return;
+    const isPro = plan.plan === "pro";
+    sidebarPlanBadge.textContent = isPro ? "Pro" : "Trial";
+    sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
+
+    if (!planBanner) return;
+    if (isPro) {
+      planBanner.hidden = true;
+      planBanner.textContent = "";
+      return;
+    }
+
+    const days = plan.trial_days_left ?? 0;
+    const remaining = plan.reminders_remaining ?? 0;
+    let text = `Trial: осталось <strong>${days} дн.</strong> и <strong>${remaining}</strong> напоминаний из 100.`;
+    if (!plan.is_trial_active) {
+      text = `Trial завершён. Перейдите на <strong>Pro (${plan.pro_price_rub} ₽/мес)</strong> — оплата через ЮKassa скоро.`;
+    } else if (!plan.can_send_reminders) {
+      text = `Лимит trial исчерпан. Pro — <strong>${plan.pro_price_rub} ₽/мес</strong> (ЮKassa скоро).`;
+    }
+    planBanner.innerHTML = text;
+    planBanner.hidden = false;
+  }
+
+  async function loadDashboardStats() {
+    if (!statAppointmentsToday) return;
+    try {
+      const stats = await apiFetch("/api/v1/company/stats");
+      statAppointmentsToday.textContent = String(stats.appointments_today ?? 0);
+      statActiveClients.textContent = String(stats.active_clients ?? 0);
+      statRemindersWeek.textContent = String(stats.reminders_week ?? 0);
+    } catch {
+      statAppointmentsToday.textContent = "0";
+      statActiveClients.textContent = "0";
+      statRemindersWeek.textContent = "0";
+    }
+  }
+
+  async function loadTelegramStatus() {
+    if (!telegramStatus) return;
+    try {
+      const data = await apiFetch("/api/v1/company/telegram");
+      telegramStatus.textContent = data.connected ? "Подключено" : "Не подключено";
+      telegramStatus.classList.toggle("cabinet-app__badge--ok", data.connected);
+
+      const checklistItem = document.querySelector('#setupChecklist li[data-check="telegram"]');
+      if (checklistItem) {
+        checklistItem.classList.toggle("is-done", data.connected);
+      }
+
+      if (!telegramManagersList) return;
+      if (!data.managers?.length) {
+        telegramManagersList.innerHTML =
+          '<p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-админов.</p>';
+        return;
+      }
+      telegramManagersList.innerHTML = data.managers
+        .map(
+          (m) =>
+            `<p class="cabinet-app__manager-item">Chat ID: <code>${m.tg_chat_id}</code></p>`
+        )
+        .join("");
+    } catch {
+      telegramStatus.textContent = "Не подключено";
+    }
   }
 
   function mapSessionUser(user) {
@@ -219,6 +305,7 @@
     telegramApiKey.textContent = key;
     settingsCompanyName.value = profile.companyName || "";
     settingsOwnerEmail.value = profile.ownerEmail || "";
+    if (profile.plan) syncPlanUi(profile.plan);
     document
       .querySelector('#setupChecklist li[data-check="company"]')
       ?.classList.add("is-done");
@@ -237,6 +324,18 @@
     appViewTitle.textContent = meta.title;
     if (viewId === "bookings") {
       loadBookings();
+    } else if (viewId === "calendar") {
+      if (!calendarLoaded) {
+        loadCalendar();
+      } else {
+        renderCalendarGrid();
+        renderCalendarDayList();
+      }
+    } else if (viewId === "overview") {
+      loadDashboardStats();
+      loadTelegramStatus();
+    } else if (viewId === "telegram") {
+      loadTelegramStatus();
     }
   }
 
@@ -247,6 +346,8 @@
     }
     showStep(stepApp);
     switchView(activeView);
+    loadDashboardStats();
+    loadTelegramStatus();
   }
 
   async function openCabinet() {
@@ -425,33 +526,50 @@
     }
   });
 
-  settingsForm.addEventListener("submit", (e) => {
+  settingsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     showError(settingsError, "");
     settingsSaved.hidden = true;
     const fd = new FormData(settingsForm);
-    const existing = getCompanyProfile() || {};
-    const profile = {
-      ...existing,
-      companyName: (fd.get("company_name") || "").toString().trim(),
-      ownerEmail: (fd.get("owner_email") || "").toString().trim().toLowerCase(),
-      apiKey: existing.apiKey || generateApiKey(),
-    };
-    if (!profile.companyName || !profile.ownerEmail) {
+    const companyName = (fd.get("company_name") || "").toString().trim();
+    const ownerEmail = (fd.get("owner_email") || "").toString().trim().toLowerCase();
+    const phone = (fd.get("phone") || "").toString().trim();
+    if (!companyName || !ownerEmail) {
       showError(settingsError, "Заполните обязательные поля.");
       return;
     }
-    saveCompanyProfile(profile);
-    syncCompanyUi(profile);
 
-    const user = getStoredUser() || {};
-    user.phone = (fd.get("phone") || "").toString().trim() || user.phone;
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    syncUserUi(user);
-    settingsSaved.hidden = false;
-    setTimeout(() => {
-      settingsSaved.hidden = true;
-    }, 2500);
+    const btn = settingsForm.querySelector('button[type="submit"]');
+    setButtonLoading(btn, true, "Сохранение…");
+
+    try {
+      const company = await apiFetch("/api/v1/company/me", {
+        method: "PATCH",
+        body: JSON.stringify({ name: companyName, owner_email: ownerEmail }),
+      });
+      if (phone) {
+        await apiFetch("/api/v1/company/profile", {
+          method: "PATCH",
+          body: JSON.stringify({ phone }),
+        });
+      }
+      const profile = profileFromCompany(company);
+      saveCompanyProfile(profile);
+      syncCompanyUi(profile);
+
+      const user = getStoredUser() || {};
+      user.phone = phone || user.phone;
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      syncUserUi(user);
+      settingsSaved.hidden = false;
+      setTimeout(() => {
+        settingsSaved.hidden = true;
+      }, 2500);
+    } catch (err) {
+      showError(settingsError, formatApiError(err.message));
+    } finally {
+      setButtonLoading(btn, false);
+    }
   });
 
   backToRegister.addEventListener("click", () => {
@@ -467,6 +585,8 @@
     clearSession();
     localStorage.removeItem(COMPANY_KEY);
     activeView = "overview";
+    calendarLoaded = false;
+    calendarAppointments = [];
     showStep(stepRegister);
     registerForm.reset();
     setPanelWide(false);
@@ -516,6 +636,147 @@
     return `${d}.${m}.${y}${time ? " в " + time : ""}`;
   }
 
+  const MONTH_NAMES = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+  ];
+
+  function toDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseDateKey(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function formatDayTitle(key) {
+    const date = parseDateKey(key);
+    const weekday = date.toLocaleDateString("ru-RU", { weekday: "long" });
+    const day = date.getDate();
+    const month = MONTH_NAMES[date.getMonth()];
+    const year = date.getFullYear();
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${day} ${month} ${year}`;
+  }
+
+  function appointmentsByDate(appointments) {
+    const map = new Map();
+    appointments.forEach((item) => {
+      const key = item.appointment_date;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    map.forEach((items) => {
+      items.sort((a, b) => String(a.appointment_time).localeCompare(String(b.appointment_time)));
+    });
+    return map;
+  }
+
+  function renderCalendarGrid() {
+    if (!calendarGrid || !calendarMonthLabel) return;
+
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    calendarMonthLabel.textContent = `${MONTH_NAMES[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayKey = toDateKey(new Date());
+    const byDate = appointmentsByDate(calendarAppointments);
+
+    calendarGrid.innerHTML = "";
+
+    for (let i = 0; i < startOffset; i += 1) {
+      const empty = document.createElement("div");
+      empty.className = "cabinet-calendar__cell cabinet-calendar__cell--empty";
+      empty.setAttribute("aria-hidden", "true");
+      calendarGrid.appendChild(empty);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month, day);
+      const key = toDateKey(date);
+      const count = byDate.get(key)?.length || 0;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cabinet-calendar__cell";
+      btn.dataset.date = key;
+      btn.setAttribute("role", "gridcell");
+      btn.setAttribute("aria-label", `${day} ${MONTH_NAMES[month]}, записей: ${count}`);
+      if (key === todayKey) btn.classList.add("is-today");
+      if (key === calendarSelectedDate) btn.classList.add("is-selected");
+      if (count > 0) btn.classList.add("has-events");
+
+      btn.innerHTML = `<span class="cabinet-calendar__day-num">${day}</span>${
+        count > 0 ? `<span class="cabinet-calendar__dot" aria-hidden="true"></span>` : ""
+      }`;
+      btn.addEventListener("click", () => selectCalendarDay(key));
+      calendarGrid.appendChild(btn);
+    }
+  }
+
+  function renderCalendarDayList() {
+    if (!calendarDayTitle || !calendarDayList) return;
+
+    calendarDayTitle.textContent = formatDayTitle(calendarSelectedDate);
+    const byDate = appointmentsByDate(calendarAppointments);
+    const items = byDate.get(calendarSelectedDate) || [];
+
+    if (!items.length) {
+      calendarDayList.innerHTML =
+        '<p class="cabinet-app__empty-inline">На этот день записей нет.</p>';
+      return;
+    }
+
+    calendarDayList.innerHTML = items
+      .map((item) => {
+        const time = String(item.appointment_time).slice(0, 5);
+        return `
+          <article class="cabinet-calendar__event">
+            <div class="cabinet-calendar__event-time">${time}</div>
+            <div class="cabinet-calendar__event-body">
+              <strong>${item.service_name}</strong>
+              <span>${item.client_name} · ${item.client_phone}</span>
+              <span class="cabinet__status cabinet__status--${item.status}">${statusLabel(item.status)}</span>
+            </div>
+          </article>`;
+      })
+      .join("");
+  }
+
+  function selectCalendarDay(key) {
+    calendarSelectedDate = key;
+    if (calendarDate) calendarDate.value = key;
+    renderCalendarGrid();
+    renderCalendarDayList();
+  }
+
+  async function loadCalendar() {
+    if (!calendarGrid) return;
+    calendarGrid.innerHTML = '<p class="cabinet__loading">Загрузка календаря…</p>';
+
+    try {
+      calendarAppointments = await apiFetch("/api/v1/company/appointments");
+      calendarLoaded = true;
+      renderCalendarGrid();
+      renderCalendarDayList();
+      if (calendarDate && !calendarDate.value) {
+        calendarDate.value = calendarSelectedDate;
+      }
+    } catch (err) {
+      calendarGrid.innerHTML = `<p class="cabinet__error">${err.message}</p>`;
+    }
+  }
+
+  function shiftCalendarMonth(delta) {
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+    renderCalendarGrid();
+  }
+
   async function loadBookings() {
     if (!bookingsList || !bookingsLoading) return;
     bookingsList.innerHTML = "";
@@ -523,29 +784,31 @@
     bookingsList.appendChild(bookingsLoading);
 
     try {
-      const bookings = await apiFetch("/api/v1/bookings/my");
+      const bookings = await apiFetch("/api/v1/company/appointments");
       bookingsLoading.remove();
 
       if (!bookings.length) {
         bookingsList.innerHTML =
-          '<p class="cabinet__empty">Активных записей пока нет.</p>';
+          '<p class="cabinet__empty">Записей пока нет. Создайте через webhook или календарь.</p>';
         return;
       }
 
       bookings.forEach((b) => {
         const card = document.createElement("article");
         card.className = "cabinet__booking";
+        const canAct = b.status !== "cancelled" && b.status !== "completed";
         card.innerHTML = `
           <div class="cabinet__booking-main">
             <span class="cabinet__booking-service">${b.service_name}</span>
-            <span class="cabinet__booking-company">${b.company_name}</span>
+            <span class="cabinet__booking-company">${b.client_name} · ${b.client_phone}</span>
             <span class="cabinet__booking-date">${formatDate(b.appointment_date, b.appointment_time)}</span>
           </div>
           <div class="cabinet__booking-meta">
             <span class="cabinet__status cabinet__status--${b.status}">${statusLabel(b.status)}</span>
             ${
-              b.status !== "cancelled" && b.status !== "completed"
-                ? `<button type="button" class="cabinet__cancel" data-id="${b.id}">Отменить</button>`
+              canAct
+                ? `<button type="button" class="cabinet__confirm" data-id="${b.id}">Подтвердить</button>
+                   <button type="button" class="cabinet__cancel" data-id="${b.id}">Отменить</button>`
                 : ""
             }
           </div>`;
@@ -553,7 +816,10 @@
       });
 
       bookingsList.querySelectorAll(".cabinet__cancel").forEach((btn) => {
-        btn.addEventListener("click", () => cancelBooking(btn.dataset.id, btn));
+        btn.addEventListener("click", () => updateBookingStatus(btn.dataset.id, "cancelled", btn));
+      });
+      bookingsList.querySelectorAll(".cabinet__confirm").forEach((btn) => {
+        btn.addEventListener("click", () => updateBookingStatus(btn.dataset.id, "confirmed", btn));
       });
     } catch (err) {
       bookingsLoading.remove();
@@ -561,17 +827,66 @@
     }
   }
 
-  async function cancelBooking(id, btn) {
-    if (!confirm("Отменить эту запись?")) return;
+  async function updateBookingStatus(id, status, btn) {
+    const label = status === "cancelled" ? "отменить" : "подтвердить";
+    if (!confirm(`Вы уверены, что хотите ${label} эту запись?`)) return;
     btn.disabled = true;
     try {
-      await apiFetch(`/api/v1/bookings/${id}/cancel`, { method: "POST" });
+      await apiFetch(`/api/v1/company/appointments/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
       loadBookings();
+      loadDashboardStats();
     } catch (err) {
       alert(err.message);
       btn.disabled = false;
     }
   }
+
+  calendarPrevMonth?.addEventListener("click", () => shiftCalendarMonth(-1));
+  calendarNextMonth?.addEventListener("click", () => shiftCalendarMonth(1));
+
+  calendarCreateForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    showError(calendarCreateError, "");
+    if (calendarCreateSuccess) calendarCreateSuccess.hidden = true;
+
+    const submitBtn = calendarCreateForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true, "Создание…");
+
+    const formData = new FormData(calendarCreateForm);
+    const payload = {
+      full_name: String(formData.get("full_name") || "").trim(),
+      phone: String(formData.get("phone") || "").trim(),
+      service_name: String(formData.get("service_name") || "").trim(),
+      appointment_date: String(formData.get("appointment_date") || ""),
+      appointment_time: String(formData.get("appointment_time") || ""),
+    };
+
+    try {
+      await apiFetch("/api/v1/company/appointments", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      calendarSelectedDate = payload.appointment_date;
+      calendarMonth = parseDateKey(payload.appointment_date);
+      calendarLoaded = false;
+      await loadCalendar();
+      loadDashboardStats();
+
+      if (calendarCreateSuccess) calendarCreateSuccess.hidden = false;
+      calendarCreateForm.querySelector("#calendarClientName")?.focus();
+      calendarCreateForm.reset();
+      if (calendarDate) calendarDate.value = calendarSelectedDate;
+      if (calendarTime) calendarTime.value = payload.appointment_time;
+    } catch (err) {
+      showError(calendarCreateError, err.message);
+    } finally {
+      setButtonLoading(submitBtn, false);
+    }
+  });
 
   openBtn.addEventListener("click", openCabinet);
   closeBtn.addEventListener("click", closeCabinet);
