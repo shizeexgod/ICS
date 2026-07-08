@@ -1,36 +1,66 @@
 /**
- * Личный кабинет: email OTP-авторизация и список записей.
- * API: POST /api/v1/auth/send-code, POST /api/v1/auth/verify-code,
- *      GET /api/v1/bookings/my, POST /api/v1/bookings/:id/cancel
+ * Личный кабинет: email OTP, онбординг предприятия, sidebar-dashboard (UI).
  */
 (function initCabinet() {
   const TOKEN_KEY = "ics:auth_token";
   const REFRESH_KEY = "ics:auth_refresh";
   const USER_KEY = "ics:auth_user";
+  const COMPANY_KEY = "ics:company_profile";
+
+  const VIEW_META = {
+    overview: { eyebrow: "Обзор", title: "Главная" },
+    bookings: { eyebrow: "Записи", title: "Записи клиентов" },
+    settings: { eyebrow: "Настройки", title: "Настройки предприятия" },
+    telegram: { eyebrow: "Интеграции", title: "Telegram" },
+    templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
+  };
 
   const cabinet = document.getElementById("cabinet");
+  const cabinetPanel = document.getElementById("cabinetPanel");
   const backdrop = document.getElementById("cabinetBackdrop");
   const openBtn = document.getElementById("openCabinet");
   const closeBtn = document.getElementById("closeCabinet");
   const stepRegister = document.getElementById("cabinetStepRegister");
   const stepVerify = document.getElementById("cabinetStepVerify");
-  const stepDashboard = document.getElementById("cabinetStepDashboard");
+  const stepOnboarding = document.getElementById("cabinetStepOnboarding");
+  const stepApp = document.getElementById("cabinetStepApp");
   const registerForm = document.getElementById("registerForm");
   const verifyForm = document.getElementById("verifyForm");
+  const onboardingForm = document.getElementById("onboardingForm");
+  const settingsForm = document.getElementById("settingsForm");
   const registerError = document.getElementById("registerError");
   const verifyError = document.getElementById("verifyError");
+  const onboardingError = document.getElementById("onboardingError");
+  const settingsError = document.getElementById("settingsError");
+  const settingsSaved = document.getElementById("settingsSaved");
   const verifyEmailDisplay = document.getElementById("verifyEmailDisplay");
   const verifyDevHint = document.getElementById("verifyDevHint");
   const backToRegister = document.getElementById("backToRegister");
   const logoutBtn = document.getElementById("cabinetLogout");
+  const logoutBtnAlt = document.getElementById("cabinetLogoutAlt");
   const bookingsList = document.getElementById("bookingsList");
   const bookingsLoading = document.getElementById("bookingsLoading");
   const dashboardUserName = document.getElementById("dashboardUserName");
+  const sidebarUserName = document.getElementById("sidebarUserName");
+  const sidebarUserEmail = document.getElementById("sidebarUserEmail");
+  const sidebarCompanyName = document.getElementById("sidebarCompanyName");
+  const appViewEyebrow = document.getElementById("appViewEyebrow");
+  const appViewTitle = document.getElementById("appViewTitle");
+  const onboardingCompanyName = document.getElementById("onboardingCompanyName");
+  const onboardingOwnerEmail = document.getElementById("onboardingOwnerEmail");
+  const settingsCompanyName = document.getElementById("settingsCompanyName");
+  const settingsOwnerEmail = document.getElementById("settingsOwnerEmail");
+  const settingsPhone = document.getElementById("settingsPhone");
+  const overviewApiKey = document.getElementById("overviewApiKey");
+  const settingsApiKey = document.getElementById("settingsApiKey");
+  const telegramApiKey = document.getElementById("telegramApiKey");
   const nav = document.getElementById("nav");
+  const cabinetNav = document.getElementById("cabinetNav");
 
   let pendingEmail = "";
   let pendingName = "";
   let pendingPhone = "";
+  let activeView = "overview";
 
   function apiBase() {
     return (window.ICS_API_BASE || "").replace(/\/$/, "");
@@ -62,7 +92,26 @@
     }
   }
 
+  function getCompanyProfile() {
+    try {
+      return JSON.parse(localStorage.getItem(COMPANY_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function saveCompanyProfile(profile) {
+    localStorage.setItem(COMPANY_KEY, JSON.stringify(profile));
+  }
+
+  function generateApiKey() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
   function showError(el, msg) {
+    if (!el) return;
     el.textContent = msg;
     el.hidden = !msg;
   }
@@ -87,19 +136,79 @@
 
   function formatApiError(message) {
     const map = {
-      "Failed to store verification code.": "Не удалось сохранить код. Проверьте, что в Supabase выполнены миграции 004 и 005.",
-      "Failed to send verification email.": "Не удалось отправить письмо. Проверьте SMTP на Amvera.",
-      "Email delivery is not configured.": "Почта не настроена на сервере (SMTP).",
+      "Failed to store verification code.":
+        "Не удалось сохранить код. Проверьте, что в Supabase выполнены миграции 004 и 005.",
+      "Failed to send verification email.":
+        "Не удалось отправить письмо. Проверьте SMTP на Amvera.",
+      "Email delivery is not configured.":
+        "Почта не настроена на сервере (SMTP).",
       "Invalid code.": "Неверный код.",
       "Code expired. Request a new one.": "Код истёк. Запросите новый.",
     };
     return map[message] || message;
   }
 
+  function setPanelWide(wide) {
+    cabinetPanel.classList.toggle("cabinet__panel--wide", wide);
+  }
+
   function showStep(step) {
-    [stepRegister, stepVerify, stepDashboard].forEach((s) => {
+    const steps = [stepRegister, stepVerify, stepOnboarding, stepApp];
+    steps.forEach((s) => {
       s.hidden = s !== step;
     });
+    setPanelWide(step === stepApp);
+  }
+
+  function syncUserUi(user) {
+    const name = user?.name || user?.email || "Пользователь";
+    const email = user?.email || "—";
+    dashboardUserName.textContent = name;
+    sidebarUserName.textContent = name;
+    sidebarUserEmail.textContent = email;
+    if (settingsPhone && user?.phone) {
+      settingsPhone.value = user.phone;
+    }
+  }
+
+  function syncCompanyUi(profile) {
+    if (!profile) return;
+    sidebarCompanyName.textContent = profile.companyName || "ICS";
+    const key = profile.apiKey || "—";
+    overviewApiKey.textContent = key;
+    settingsApiKey.textContent = key;
+    telegramApiKey.textContent = key;
+    settingsCompanyName.value = profile.companyName || "";
+    settingsOwnerEmail.value = profile.ownerEmail || "";
+    document
+      .querySelector('#setupChecklist li[data-check="company"]')
+      ?.classList.add("is-done");
+  }
+
+  function switchView(viewId) {
+    activeView = viewId;
+    cabinetNav.querySelectorAll(".cabinet-app__nav-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.view === viewId);
+    });
+    document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.viewPanel !== viewId;
+    });
+    const meta = VIEW_META[viewId] || VIEW_META.overview;
+    appViewEyebrow.textContent = meta.eyebrow;
+    appViewTitle.textContent = meta.title;
+    if (viewId === "bookings") {
+      loadBookings();
+    }
+  }
+
+  function enterApp(user) {
+    syncUserUi(user);
+    const profile = getCompanyProfile();
+    if (profile) {
+      syncCompanyUi(profile);
+    }
+    showStep(stepApp);
+    switchView(activeView);
   }
 
   function openCabinet() {
@@ -109,16 +218,23 @@
     nav.classList.remove("open");
 
     const token = getToken();
-    if (token) {
-      showStep(stepDashboard);
-      const user = getStoredUser();
-      dashboardUserName.textContent = user?.name || user?.email || "клиент";
-      loadBookings();
-    } else {
+    if (!token) {
       showStep(stepRegister);
       registerForm.reset();
       showError(registerError, "");
+      return;
     }
+
+    const user = getStoredUser();
+    syncUserUi(user);
+
+    if (!getCompanyProfile()) {
+      onboardingOwnerEmail.value = user?.email || "";
+      showStep(stepOnboarding);
+      return;
+    }
+
+    enterApp(user);
   }
 
   function closeCabinet() {
@@ -171,13 +287,8 @@
     setButtonLoading(btn, true, "Отправка…");
 
     try {
-      const payload = {
-        email: pendingEmail,
-        name: pendingName,
-      };
-      if (pendingPhone) {
-        payload.phone = pendingPhone;
-      }
+      const payload = { email: pendingEmail, name: pendingName };
+      if (pendingPhone) payload.phone = pendingPhone;
 
       const data = await apiFetch("/api/v1/auth/send-code", {
         method: "POST",
@@ -216,19 +327,77 @@
       });
 
       const user = data.user || {};
-      setSession(data.access_token, data.refresh_token, {
+      const sessionUser = {
         name: user.name || pendingName,
         email: user.email || pendingEmail,
         phone: user.phone || pendingPhone || null,
-      });
-      dashboardUserName.textContent = user.name || pendingName;
-      showStep(stepDashboard);
-      loadBookings();
+        role: user.role || "client",
+        company_id: user.company_id || null,
+      };
+      setSession(data.access_token, data.refresh_token, sessionUser);
+
+      if (!getCompanyProfile()) {
+        onboardingOwnerEmail.value = sessionUser.email || "";
+        onboardingCompanyName.value = "";
+        showStep(stepOnboarding);
+      } else {
+        enterApp(sessionUser);
+      }
     } catch (err) {
       showError(verifyError, formatApiError(err.message));
     } finally {
       setButtonLoading(btn, false);
     }
+  });
+
+  onboardingForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    showError(onboardingError, "");
+    const fd = new FormData(onboardingForm);
+    const companyName = (fd.get("company_name") || "").toString().trim();
+    const ownerEmail = (fd.get("owner_email") || "").toString().trim().toLowerCase();
+    if (!companyName || !ownerEmail) {
+      showError(onboardingError, "Заполните все поля.");
+      return;
+    }
+
+    const profile = {
+      companyName,
+      ownerEmail,
+      apiKey: generateApiKey(),
+      createdAt: new Date().toISOString(),
+    };
+    saveCompanyProfile(profile);
+    enterApp(getStoredUser());
+  });
+
+  settingsForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    showError(settingsError, "");
+    settingsSaved.hidden = true;
+    const fd = new FormData(settingsForm);
+    const existing = getCompanyProfile() || {};
+    const profile = {
+      ...existing,
+      companyName: (fd.get("company_name") || "").toString().trim(),
+      ownerEmail: (fd.get("owner_email") || "").toString().trim().toLowerCase(),
+      apiKey: existing.apiKey || generateApiKey(),
+    };
+    if (!profile.companyName || !profile.ownerEmail) {
+      showError(settingsError, "Заполните обязательные поля.");
+      return;
+    }
+    saveCompanyProfile(profile);
+    syncCompanyUi(profile);
+
+    const user = getStoredUser() || {};
+    user.phone = (fd.get("phone") || "").toString().trim() || user.phone;
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    syncUserUi(user);
+    settingsSaved.hidden = false;
+    setTimeout(() => {
+      settingsSaved.hidden = true;
+    }, 2500);
   });
 
   backToRegister.addEventListener("click", () => {
@@ -240,10 +409,39 @@
     }
   });
 
-  logoutBtn.addEventListener("click", () => {
+  function handleLogout() {
     clearSession();
+    activeView = "overview";
     showStep(stepRegister);
     registerForm.reset();
+    setPanelWide(false);
+  }
+
+  logoutBtn.addEventListener("click", handleLogout);
+  logoutBtnAlt.addEventListener("click", handleLogout);
+
+  cabinetNav.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-view]");
+    if (!btn) return;
+    switchView(btn.dataset.view);
+  });
+
+  document.querySelectorAll("[data-copy-target]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const el = document.getElementById(btn.dataset.copyTarget);
+      if (!el) return;
+      const text = el.textContent.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = "Скопировано";
+        setTimeout(() => {
+          btn.textContent = prev;
+        }, 1500);
+      } catch {
+        alert("Не удалось скопировать");
+      }
+    });
   });
 
   function statusLabel(status) {
@@ -264,6 +462,7 @@
   }
 
   async function loadBookings() {
+    if (!bookingsList || !bookingsLoading) return;
     bookingsList.innerHTML = "";
     bookingsLoading.hidden = false;
     bookingsList.appendChild(bookingsLoading);
@@ -273,7 +472,8 @@
       bookingsLoading.remove();
 
       if (!bookings.length) {
-        bookingsList.innerHTML = '<p class="cabinet__empty">Активных записей пока нет.</p>';
+        bookingsList.innerHTML =
+          '<p class="cabinet__empty">Активных записей пока нет.</p>';
         return;
       }
 
