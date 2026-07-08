@@ -112,5 +112,7 @@ if __name__ == "__main__":
     backend_root = Path(__file__).resolve().parent
     os.chdir(backend_root)
 
-    port = int(os.environ.get("PORT", "5000"))
+    # Hard-bind to containerPort from amvera.yaml. Do NOT override with PORT=80.
+    port = 5000
+
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
