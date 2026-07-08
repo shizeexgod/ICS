@@ -75,6 +75,22 @@ class Settings(BaseSettings):
         description="JWT access token lifetime in days.",
     )
 
+    # --- Supabase REST (PostgREST client for auth/templates) ----------------
+    SUPABASE_URL: str = Field(
+        default="",
+        description="Supabase project URL, e.g. https://xxxx.supabase.co",
+    )
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(
+        default="",
+        description="Service role key for server-side Supabase table access.",
+    )
+
+    # --- SMTP (email OTP) ---------------------------------------------------
+    SMTP_SERVER: str = Field(default="", description="SMTP host for verification emails.")
+    SMTP_PORT: int = Field(default=587, description="SMTP port (usually 587 with STARTTLS).")
+    SMTP_USER: str = Field(default="", description="SMTP login / From address.")
+    SMTP_PASSWORD: str = Field(default="", description="SMTP password or app password.")
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _ensure_async_driver(cls, value: str) -> str:

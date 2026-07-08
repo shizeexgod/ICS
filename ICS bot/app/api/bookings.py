@@ -16,7 +16,6 @@ from app.models.client import Client
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.user_booking import CancelBookingResponse, UserBookingItem
-from app.services.auth_service import normalize_phone
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +29,9 @@ async def list_my_bookings(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[UserBookingItem]:
-    """Return active appointments for the authenticated user (matched by phone)."""
-    digits = normalize_phone(user.phone)
-    if not digits:
+    """Return active appointments for the authenticated user (matched by email)."""
+    user_email = user.email.strip().lower()
+    if not user_email:
         return []
 
     try:
@@ -40,7 +39,7 @@ async def list_my_bookings(
             select(Appointment, Client, Company)
             .join(Client, Appointment.client_id == Client.id)
             .join(Company, Appointment.company_id == Company.id)
-            .where(func.regexp_replace(Client.phone, r"\D", "", "g") == digits)
+            .where(func.lower(Client.email) == user_email)
             .where(Appointment.status.notin_(_INACTIVE))
             .order_by(Appointment.appointment_date, Appointment.appointment_time)
         )
@@ -73,14 +72,14 @@ async def cancel_my_booking(
     session: AsyncSession = Depends(get_db_session),
 ) -> CancelBookingResponse:
     """Cancel an appointment that belongs to the authenticated user."""
-    digits = normalize_phone(user.phone)
+    user_email = user.email.strip().lower()
 
     try:
         result = await session.execute(
             select(Appointment, Client)
             .join(Client, Appointment.client_id == Client.id)
             .where(Appointment.id == appointment_id)
-            .where(func.regexp_replace(Client.phone, r"\D", "", "g") == digits)
+            .where(func.lower(Client.email) == user_email)
         )
         row = result.first()
     except Exception:

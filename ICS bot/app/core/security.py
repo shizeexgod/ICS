@@ -131,3 +131,16 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_current_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    """FastAPI dependency: require an authenticated admin tied to a company."""
+    if user.role != "admin":
+        logger.warning("Forbidden: user_id=%s role=%s is not admin.", user.id, user.role)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
+        )
+    return user

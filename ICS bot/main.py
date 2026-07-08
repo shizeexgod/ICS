@@ -26,8 +26,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.auth import router as auth_v1_router
+from app.api.v1.templates import router as templates_v1_router
 from app.api.appointments import router as appointments_router
-from app.api.auth import router as auth_router
 from app.api.bookings import router as bookings_router
 from app.api.webhooks import router as webhooks_router
 from app.bot.main import start_bot_polling, stop_bot_polling
@@ -83,7 +84,8 @@ app.add_middleware(
 )
 
 app.include_router(webhooks_router)
-app.include_router(auth_router)
+app.include_router(auth_v1_router)
+app.include_router(templates_v1_router)
 app.include_router(bookings_router)
 app.include_router(appointments_router)
 

@@ -1,10 +1,8 @@
-"""OTP generation/verification and JWT token helpers."""
+"""Email OTP generation and JWT token helpers."""
 
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
-import hmac
 import logging
 import secrets
 import uuid
@@ -12,57 +10,60 @@ import uuid
 import jwt
 
 from app.core.config import settings
-from app.services.notifications import clean_phone_number, send_client_sms
 
 logger = logging.getLogger(__name__)
 
-OTP_LENGTH = 6
-OTP_TTL_MINUTES = 10
+EMAIL_CODE_LENGTH = 4
+EMAIL_CODE_TTL_MINUTES = 5
+REFRESH_TOKEN_DAYS = 30
 
 
-def normalize_phone(phone: str) -> str:
-    return clean_phone_number(phone)
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
 
 
-def generate_otp() -> str:
-    return "".join(secrets.choice("0123456789") for _ in range(OTP_LENGTH))
+def generate_email_code() -> str:
+    return "".join(secrets.choice("0123456789") for _ in range(EMAIL_CODE_LENGTH))
 
 
-def hash_otp(otp: str) -> str:
-    pepper = settings.JWT_SECRET or "ics-dev-secret"
-    return hashlib.sha256(f"{otp}:{pepper}".encode()).hexdigest()
+def email_code_expiry() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=EMAIL_CODE_TTL_MINUTES)
 
 
-def verify_otp(otp: str, stored_hash: str | None) -> bool:
-    if not stored_hash:
-        return False
-    return hmac.compare_digest(hash_otp(otp), stored_hash)
-
-
-def otp_expiry() -> dt.datetime:
-    return dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=OTP_TTL_MINUTES)
-
-
-def create_access_token(*, user_id: uuid.UUID, phone: str) -> str:
+def create_access_token(*, user_id: uuid.UUID, email: str, role: str) -> str:
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
         "sub": str(user_id),
-        "phone": phone,
+        "email": email,
+        "role": role,
+        "type": "access",
         "iat": now,
         "exp": now + dt.timedelta(days=settings.JWT_EXPIRE_DAYS),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
+def create_refresh_token(*, user_id: uuid.UUID, email: str) -> str:
+    now = dt.datetime.now(dt.timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "type": "refresh",
+        "iat": now,
+        "exp": now + dt.timedelta(days=REFRESH_TOKEN_DAYS),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+
 def decode_access_token(token: str) -> dict:
-    return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    if payload.get("type") not in (None, "access"):
+        raise jwt.InvalidTokenError("Not an access token.")
+    return payload
 
 
-async def send_otp_sms(phone: str, otp: str) -> None:
-    message = f"Код входа ICS: {otp}. Действует {OTP_TTL_MINUTES} мин."
-    sent = await send_client_sms(phone, message)
-    if not sent:
-        logger.warning("OTP SMS may not have been delivered to phone=%s", normalize_phone(phone))
-
-    if settings.ENVIRONMENT == "local":
-        logger.info("[DEV OTP] phone=%s code=%s", normalize_phone(phone), otp)
+def decode_refresh_token(token: str) -> dict:
+    payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    if payload.get("type") != "refresh":
+        raise jwt.InvalidTokenError("Not a refresh token.")
+    return payload
