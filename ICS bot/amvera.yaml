@@ -11,5 +11,5 @@ build:
   useCache: true
 
 run:
-  command: uvicorn main:app --host 0.0.0.0 --port 5000
+  scriptName: main.py
   containerPort: 5000

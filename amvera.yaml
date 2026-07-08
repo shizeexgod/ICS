@@ -11,5 +11,5 @@ build:
   useCache: true
 
 run:
-  command: sh -c "cd 'ICS bot' && uvicorn main:app --host 0.0.0.0 --port 5000"
+  scriptName: ICS bot/main.py
   containerPort: 5000
