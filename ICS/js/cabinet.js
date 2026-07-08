@@ -62,6 +62,9 @@
   const statRemindersWeek = document.getElementById("statRemindersWeek");
   const sidebarPlanBadge = document.getElementById("sidebarPlanBadge");
   const planBanner = document.getElementById("planBanner");
+  const proUpgradeCard = document.getElementById("proUpgradeCard");
+  const proPriceLabel = document.getElementById("proPriceLabel");
+  const upgradeProBtnOverview = document.getElementById("upgradeProBtnOverview");
   const nav = document.getElementById("nav");
   const cabinetNav = document.getElementById("cabinetNav");
   const calendarGrid = document.getElementById("calendarGrid");
@@ -75,6 +78,8 @@
   const calendarCreateSuccess = document.getElementById("calendarCreateSuccess");
   const calendarDate = document.getElementById("calendarDate");
   const calendarTime = document.getElementById("calendarTime");
+  const templatesList = document.getElementById("templatesList");
+  const templatesLoading = document.getElementById("templatesLoading");
 
   let pendingEmail = "";
   let pendingName = "";
@@ -84,6 +89,7 @@
   let calendarSelectedDate = toDateKey(new Date());
   let calendarAppointments = [];
   let calendarLoaded = false;
+  let templatesLoaded = false;
 
   function apiBase() {
     return (window.ICS_API_BASE || "").replace(/\/$/, "");
@@ -166,6 +172,12 @@
       "Company is not configured yet.": "Сначала укажите данные предприятия.",
       "Failed to create company. Please try again.":
         "Не удалось создать компанию. Попробуйте ещё раз.",
+      "Payment provider is not configured. Contact support.":
+        "Оплата не настроена на сервере. Добавьте YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY на Amvera.",
+      "Company already has an active Pro subscription.":
+        "У вас уже активна подписка Pro.",
+      "Failed to create payment. Please try again later.":
+        "Не удалось создать платёж. Попробуйте позже.",
     };
     return map[message] || message;
   }
@@ -186,27 +198,89 @@
 
   function syncPlanUi(plan) {
     if (!plan || !sidebarPlanBadge) return;
-    const isPro = plan.plan === "pro";
+    const isPro = plan.plan === "pro" && plan.subscription_status === "active";
     sidebarPlanBadge.textContent = isPro ? "Pro" : "Trial";
     sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
 
     if (!planBanner) return;
     if (isPro) {
       planBanner.hidden = true;
-      planBanner.textContent = "";
+      planBanner.innerHTML = "";
+      if (proUpgradeCard) proUpgradeCard.hidden = true;
       return;
     }
 
     const days = plan.trial_days_left ?? 0;
     const remaining = plan.reminders_remaining ?? 0;
+    const price = plan.pro_price_rub ?? 4000;
+    if (proPriceLabel) proPriceLabel.textContent = `${price} ₽`;
     let text = `Trial: осталось <strong>${days} дн.</strong> и <strong>${remaining}</strong> напоминаний из 100.`;
+    let showUpgrade = false;
+
     if (!plan.is_trial_active) {
-      text = `Trial завершён. Перейдите на <strong>Pro (${plan.pro_price_rub} ₽/мес)</strong> — оплата через ЮKassa скоро.`;
+      text = `Trial завершён. Перейдите на <strong>Pro (${price} ₽/мес)</strong> для продолжения работы.`;
+      showUpgrade = true;
     } else if (!plan.can_send_reminders) {
-      text = `Лимит trial исчерпан. Pro — <strong>${plan.pro_price_rub} ₽/мес</strong> (ЮKassa скоро).`;
+      text = `Лимит trial исчерпан. Перейдите на <strong>Pro (${price} ₽/мес)</strong>.`;
+      showUpgrade = true;
     }
-    planBanner.innerHTML = text;
+
+    if (proUpgradeCard) proUpgradeCard.hidden = !showUpgrade;
+
+    planBanner.innerHTML = showUpgrade
+      ? `<span class="cabinet-app__plan-banner-text">${text}</span>
+         <button type="button" class="btn btn--primary cabinet-app__upgrade-btn" id="upgradeProBtn">
+           Оплатить Pro — ${price} ₽
+         </button>`
+      : text;
     planBanner.hidden = false;
+
+    const upgradeBtn = document.getElementById("upgradeProBtn");
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener("click", startProPayment);
+    }
+    if (upgradeProBtnOverview) {
+      upgradeProBtnOverview.onclick = startProPayment;
+    }
+  }
+
+  async function startProPayment(ev) {
+    const btn = ev?.currentTarget || document.getElementById("upgradeProBtn");
+    setButtonLoading(btn, true, "Переход к оплате…");
+    const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
+    try {
+      const data = await apiFetch("/api/v1/billing/create-payment", {
+        method: "POST",
+        body: JSON.stringify({ return_url: returnUrl }),
+      });
+      window.location.href = data.confirmation_url;
+    } catch (err) {
+      alert(err.message);
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function handleBillingReturn() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("billing") !== "success") return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      await apiFetch("/api/v1/billing/status");
+      const company = await loadCompanyProfile();
+      if (company) syncCompanyUi(company);
+      openCabinet();
+      switchView("overview");
+    } catch {
+      /* webhook may still be processing */
+    } finally {
+      params.delete("billing");
+      const clean = params.toString();
+      const newUrl = `${window.location.pathname}${clean ? `?${clean}` : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", newUrl);
+    }
   }
 
   async function loadDashboardStats() {
@@ -336,6 +410,8 @@
       loadTelegramStatus();
     } else if (viewId === "telegram") {
       loadTelegramStatus();
+    } else if (viewId === "templates") {
+      loadTemplates();
     }
   }
 
@@ -587,6 +663,7 @@
     activeView = "overview";
     calendarLoaded = false;
     calendarAppointments = [];
+    templatesLoaded = false;
     showStep(stepRegister);
     registerForm.reset();
     setPanelWide(false);
@@ -844,6 +921,128 @@
     }
   }
 
+  async function loadTemplates() {
+    if (!templatesList || !templatesLoading) return;
+    templatesList.innerHTML = "";
+    templatesLoading.hidden = false;
+    templatesList.appendChild(templatesLoading);
+
+    try {
+      const data = await apiFetch("/api/v1/templates");
+      templatesLoading.remove();
+      const templates = data.templates || [];
+      templatesLoaded = true;
+
+      document
+        .querySelector('#setupChecklist li[data-check="templates"]')
+        ?.classList.add("is-done");
+
+      if (!templates.length) {
+        templatesList.innerHTML =
+          '<p class="cabinet__empty">Шаблоны не найдены.</p>';
+        return;
+      }
+
+      templates.forEach((tpl) => {
+        const card = document.createElement("article");
+        card.className = "cabinet-app__template-editor";
+        card.dataset.eventType = tpl.event_type;
+
+        const head = document.createElement("div");
+        head.className = "cabinet-app__template-editor-head";
+        head.innerHTML = `
+          <div>
+            <h3></h3>
+            <p></p>
+          </div>
+          <label class="cabinet-app__toggle">
+            <input type="checkbox" class="cabinet-app__toggle-input" data-field="is_enabled">
+            <span>Вкл.</span>
+          </label>`;
+        head.querySelector("h3").textContent = tpl.title;
+        head.querySelector("p").textContent = tpl.description;
+        head.querySelector('[data-field="is_enabled"]').checked = !!tpl.is_enabled;
+
+        const textarea = document.createElement("textarea");
+        textarea.className = "cabinet-app__template-text";
+        textarea.rows = 5;
+        textarea.dataset.field = "tg_template";
+        textarea.value = tpl.tg_template;
+
+        const placeholders = document.createElement("p");
+        placeholders.className = "cabinet-app__template-placeholders";
+        placeholders.textContent = "Плейсхолдеры: ";
+        (tpl.placeholders || []).forEach((p, index) => {
+          if (index > 0) placeholders.append(" ");
+          const code = document.createElement("code");
+          code.textContent = `{${p}}`;
+          placeholders.append(code);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "cabinet-app__template-actions";
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "btn btn--primary cabinet-app__template-save";
+        saveBtn.dataset.eventType = tpl.event_type;
+        saveBtn.textContent = "Сохранить";
+        const savedEl = document.createElement("span");
+        savedEl.className = "cabinet-app__saved cabinet-app__template-saved";
+        savedEl.hidden = true;
+        savedEl.textContent = "Сохранено";
+        actions.append(saveBtn, savedEl);
+
+        card.append(head, textarea, placeholders, actions);
+        templatesList.appendChild(card);
+      });
+
+      templatesList.querySelectorAll(".cabinet-app__template-save").forEach((btn) => {
+        btn.addEventListener("click", () => saveTemplate(btn.dataset.eventType, btn));
+      });
+    } catch (err) {
+      templatesLoading.remove();
+      templatesList.innerHTML = `<p class="cabinet__error">${err.message}</p>`;
+    }
+  }
+
+  async function saveTemplate(eventType, btn) {
+    const card = templatesList.querySelector(`[data-event-type="${eventType}"]`);
+    if (!card) return;
+
+    const tgTemplate = card.querySelector('[data-field="tg_template"]')?.value?.trim();
+    const isEnabled = card.querySelector('[data-field="is_enabled"]')?.checked ?? true;
+    const savedEl = card.querySelector(".cabinet-app__template-saved");
+
+    if (!tgTemplate) {
+      alert("Текст шаблона не может быть пустым.");
+      return;
+    }
+
+    btn.disabled = true;
+    try {
+      await apiFetch(`/api/v1/templates/${eventType}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          tg_template: tgTemplate,
+          is_enabled: isEnabled,
+        }),
+      });
+      if (savedEl) {
+        savedEl.hidden = false;
+        setTimeout(() => {
+          savedEl.hidden = true;
+        }, 2000);
+      }
+      document
+        .querySelector('#setupChecklist li[data-check="templates"]')
+        ?.classList.add("is-done");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   calendarPrevMonth?.addEventListener("click", () => shiftCalendarMonth(-1));
   calendarNextMonth?.addEventListener("click", () => shiftCalendarMonth(1));
 
@@ -902,4 +1101,6 @@
       openCabinet();
     }
   });
+
+  handleBillingReturn();
 })();

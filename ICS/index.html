@@ -345,6 +345,13 @@
       <h5>Контакты</h5>
       <a href="https://t.me/icsoffic1al" target="_blank" rel="noopener">@icsoffic1al</a>
       <a href="tel:+79643704871">+7 964 370-48-71</a>
+      <a href="mailto:ICSnotify@yandex.ru">ICSnotify@yandex.ru</a>
+    </div>
+
+    <div class="footer__col">
+      <h5>Документы</h5>
+      <a href="requisites.html">Реквизиты</a>
+      <a href="offer.html">Публичная оферта</a>
     </div>
 
     <div class="footer__col">
@@ -362,6 +369,8 @@
   </div>
   <div class="container footer__bottom">
     <span>© 2026 ICS. Все права защищены.</span>
+    <span id="footerOwner" hidden></span>
+    <span id="footerInn" hidden></span>
     <span>Сервис автоматизации напоминаний о записи</span>
   </div>
 </footer>
@@ -501,6 +510,14 @@
           <section class="cabinet-app__view is-active" data-view-panel="overview">
             <p class="cabinet-app__lead">Здравствуйте, <strong id="dashboardUserName">—</strong>. Здесь сводка по напоминаниям и подключению сервиса.</p>
             <div class="cabinet-app__plan-banner" id="planBanner" hidden></div>
+            <div class="cabinet-app__cards" id="proUpgradeCard" hidden>
+              <article class="cabinet-app__card cabinet-app__card--pro">
+                <h3>ICS Pro</h3>
+                <p class="cabinet-app__hint">Безлимитные напоминания и полный доступ к сервису.</p>
+                <p class="cabinet-app__pro-price"><strong id="proPriceLabel">4000 ₽</strong> / месяц</p>
+                <button type="button" class="btn btn--primary" id="upgradeProBtnOverview">Перейти на Pro</button>
+              </article>
+            </div>
             <div class="cabinet-app__stats">
               <article class="cabinet-app__stat">
                 <span class="cabinet-app__stat-label">Записи сегодня</span>
@@ -665,29 +682,9 @@
 
           <!-- Шаблоны -->
           <section class="cabinet-app__view" data-view-panel="templates" hidden>
-            <p class="cabinet-app__lead">Тексты Telegram-уведомлений для клиентов и администраторов.</p>
-            <div class="cabinet-app__template-list">
-              <article class="cabinet-app__template">
-                <div>
-                  <h3>Напоминание о записи</h3>
-                  <p>За 24 часа до визита клиенту в мессенджер.</p>
-                </div>
-                <span class="cabinet-app__badge cabinet-app__badge--muted">Скоро</span>
-              </article>
-              <article class="cabinet-app__template">
-                <div>
-                  <h3>Подтверждение записи</h3>
-                  <p>Сразу после создания записи в CRM.</p>
-                </div>
-                <span class="cabinet-app__badge cabinet-app__badge--muted">Скоро</span>
-              </article>
-              <article class="cabinet-app__template">
-                <div>
-                  <h3>Отмена записи</h3>
-                  <p>Когда запись отменена клиентом или администратором.</p>
-                </div>
-                <span class="cabinet-app__badge cabinet-app__badge--muted">Скоро</span>
-              </article>
+            <p class="cabinet-app__lead">Тексты уведомлений для клиентов и Telegram-администраторов. Используйте плейсхолдеры в фигурных скобках.</p>
+            <div class="cabinet-app__template-list" id="templatesList">
+              <div class="cabinet__loading" id="templatesLoading">Загрузка шаблонов…</div>
             </div>
           </section>
         </div>
@@ -703,6 +700,8 @@
   document.write('<script src="' + (isLocal ? 'js/config.js' : '/api/config') + '"><\/script>');
 })();
 </script>
+<script src="js/legal-config.js"></script>
+<script src="js/legal-page.js"></script>
 <script src="js/script.js"></script>
 <script src="js/cabinet.js"></script>
 </body>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="blue">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d16">
+<meta name="color-scheme" content="dark light">
+<title>Реквизиты — ICS</title>
+<meta name="description" content="Контакты и реквизиты сервиса ICS.">
+<link rel="icon" href="assets/logo-source.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+<header class="header">
+  <div class="container header__inner">
+    <a href="index.html" class="brand">
+      <span class="brand__mark"><img src="assets/logo-source.png" alt="ICS"></span>
+      <span class="brand__text">
+        <span class="brand__name">ICS</span>
+        <span class="brand__sub">напоминания о записи</span>
+      </span>
+    </a>
+    <div class="header__actions">
+      <div class="theme-switch" id="themeSwitch" role="group" aria-label="Тема оформления">
+        <button class="theme-switch__btn" data-theme-choice="blue" aria-label="Синяя тема"><span class="theme-swatch theme-swatch--blue"></span></button>
+        <button class="theme-switch__btn" data-theme-choice="light" aria-label="Светлая тема"><span class="theme-swatch theme-swatch--light"></span></button>
+        <button class="theme-switch__btn" data-theme-choice="dark" aria-label="Тёмная тема"><span class="theme-swatch theme-swatch--dark"></span></button>
+      </div>
+      <a href="index.html" class="btn btn--ghost legal-back">На главную</a>
+    </div>
+  </div>
+</header>
+
+<main class="legal-page container">
+  <span class="eyebrow">Документы</span>
+  <h1 class="legal-page__title">Реквизиты</h1>
+  <p class="legal-page__lead">Контактная и платёжная информация исполнителя сервиса ICS.</p>
+
+  <div class="legal-card">
+    <h2>Исполнитель</h2>
+    <dl class="legal-dl">
+      <div class="legal-dl__row">
+        <dt>ФИО</dt>
+        <dd data-legal="ownerName">—</dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Статус</dt>
+        <dd data-legal="status">Самозанятый (НПД)</dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>ИНН</dt>
+        <dd data-legal="inn">—</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="legal-card">
+    <h2>Услуга</h2>
+    <dl class="legal-dl">
+      <div class="legal-dl__row">
+        <dt>Наименование</dt>
+        <dd data-legal="serviceName">ICS</dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Описание</dt>
+        <dd data-legal="serviceDescription">Сервис автоматических напоминаний о записи для бизнеса.</dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Тариф Pro</dt>
+        <dd><span data-legal="proPriceRub">4000</span> ₽ / месяц</dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Получение услуги</dt>
+        <dd>Доступ к личному кабинету на сайте после регистрации и оплаты подписки.</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="legal-card">
+    <h2>Контакты</h2>
+    <dl class="legal-dl">
+      <div class="legal-dl__row">
+        <dt>Email</dt>
+        <dd><a href="mailto:ICSnotify@yandex.ru" data-legal="email">ICSnotify@yandex.ru</a></dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Телефон</dt>
+        <dd><a href="tel:+79643704871" data-legal="phoneDisplay">+7 964 370-48-71</a></dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Telegram</dt>
+        <dd><a href="https://t.me/icsoffic1al" target="_blank" rel="noopener" data-legal="telegramHandle">@icsoffic1al</a></dd>
+      </div>
+      <div class="legal-dl__row">
+        <dt>Поддержка</dt>
+        <dd>Пн–Пт, 09:00–19:00 (МСК)</dd>
+      </div>
+    </dl>
+  </div>
+
+  <p class="legal-page__note">Оплата подписки Pro осуществляется через ЮKassa. Публичная оферта — на странице <a href="offer.html">Оферта</a>.</p>
+</main>
+
+<footer class="footer">
+  <div class="container footer__bottom footer__bottom--legal">
+    <span>© 2026 ICS</span>
+    <span id="footerInn" hidden></span>
+    <span><a href="requisites.html">Реквизиты</a> · <a href="offer.html">Оферта</a></span>
+  </div>
+</footer>
+
+<script src="js/legal-config.js"></script>
+<script src="js/legal-page.js"></script>
+<script src="js/script.js"></script>
+</body>
+</html>

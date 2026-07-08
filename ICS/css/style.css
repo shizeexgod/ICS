@@ -766,6 +766,143 @@ h1, h2, h3, .brand__name, .nav a, .btn, .steps__num, .stat__num {
 
 .footer__bottom {
   margin-top: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 20px 0 28px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.footer__bottom--legal {
+  justify-content: center;
+  gap: 8px 16px;
+}
+.footer__bottom a { color: var(--text-dim); }
+.footer__bottom a:hover { color: var(--accent-2); }
+
+/* ============ Legal pages (реквизиты, оферта) ============ */
+.legal-back {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.legal-page {
+  padding: 48px 24px 64px;
+  max-width: 720px;
+}
+
+.legal-page__title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 8px 0 12px;
+  line-height: 1.15;
+}
+
+.legal-page__lead {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  line-height: 1.55;
+}
+
+.legal-page__note {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+.legal-page__note a { color: var(--accent); }
+
+.legal-card {
+  padding: 20px 22px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.legal-card h2 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+.legal-dl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legal-dl__row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px 20px;
+  align-items: baseline;
+}
+
+.legal-dl dt {
+  font-size: 13px;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.legal-dl dd {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.legal-dl a {
+  color: var(--accent);
+}
+.legal-dl a:hover { color: var(--accent-2); }
+
+.legal-prose {
+  padding: 24px 26px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.legal-prose h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  color: var(--text);
+}
+.legal-prose h2:first-child { margin-top: 0; }
+
+.legal-prose p {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.65;
+  margin-bottom: 10px;
+}
+
+.legal-prose a { color: var(--accent); }
+.legal-prose a:hover { color: var(--accent-2); }
+
+.legal-prose__date {
+  margin-top: 24px !important;
+  font-size: 13px !important;
+  color: var(--text-faint) !important;
+}
+
+@media (max-width: 560px) {
+  .legal-dl__row { grid-template-columns: 1fr; gap: 4px; }
+  .legal-page { padding-top: 32px; }
+  .legal-back { display: none; }
+}
+  margin-top: 48px;
   padding-top: 22px;
   border-top: 1px solid var(--border);
   display: flex;
@@ -1505,16 +1642,41 @@ body.cabinet-open .footer {
   border-color: rgba(126, 231, 135, 0.25);
 }
 .cabinet-app__plan-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
   padding: 12px 16px;
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
   font-size: 13px;
   line-height: 1.45;
   color: var(--text-dim);
 }
 .cabinet-app__plan-banner strong { color: var(--text); }
+.cabinet-app__plan-banner-text { flex: 1; min-width: 200px; }
+.cabinet-app__upgrade-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+.cabinet-app__card--pro {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+.cabinet-app__pro-price {
+  font-size: 22px;
+  margin: 8px 0 14px;
+  color: var(--text);
+}
+.cabinet-app__pro-price strong {
+  font-family: var(--font-display, inherit);
+  letter-spacing: -0.02em;
+}
+.cabinet-app__badge {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
@@ -1579,6 +1741,93 @@ body.cabinet-open .footer {
   font-size: 13px;
   color: var(--text-dim);
   line-height: 1.4;
+}
+
+.cabinet-app__template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.cabinet-app__template-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cabinet-app__template-editor h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.cabinet-app__template-editor p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.cabinet-app__template-text {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.cabinet-app__template-text:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.cabinet-app__template-placeholders {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.cabinet-app__template-placeholders code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.cabinet-app__template-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cabinet-app__template-saved {
+  margin: 0;
+}
+
+.cabinet-app__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cabinet-app__toggle-input {
+  accent-color: var(--accent);
 }
 
 /* ============ Cabinet calendar ============ */
@@ -1812,6 +2061,7 @@ body.cabinet-open .footer {
   .cabinet-app__cards { grid-template-columns: 1fr; }
   .cabinet-app__settings-grid { grid-template-columns: 1fr; }
   .cabinet-app__template { flex-direction: column; align-items: flex-start; }
+  .cabinet-app__template-editor-head { flex-direction: column; }
   .cabinet-calendar { grid-template-columns: 1fr; }
   .cabinet-calendar__form-row { grid-template-columns: 1fr; }
 }
