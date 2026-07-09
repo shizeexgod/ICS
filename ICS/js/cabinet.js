@@ -950,6 +950,37 @@
     },
   };
 
+  const PLACEHOLDER_LABELS = {
+    client_name: "имя клиента",
+    company_name: "название компании",
+    service_name: "услуга",
+    appointment_date: "дата записи",
+    appointment_time: "время записи",
+    client_phone: "телефон клиента",
+  };
+
+  function buildPlaceholderLegend(usedKeys) {
+    const legend = document.createElement("aside");
+    legend.className = "cabinet-app__template-legend";
+    legend.innerHTML = '<p class="cabinet-app__template-legend-title">Обозначения плейсхолдеров</p>';
+
+    const list = document.createElement("ul");
+    list.className = "cabinet-app__template-legend-list";
+
+    usedKeys.forEach((key) => {
+      const item = document.createElement("li");
+      const code = document.createElement("code");
+      code.textContent = `{${key}}`;
+      const label = document.createElement("span");
+      label.textContent = PLACEHOLDER_LABELS[key] || key;
+      item.append(code, label);
+      list.appendChild(item);
+    });
+
+    legend.appendChild(list);
+    return legend;
+  }
+
   function channelLabel(channel) {
     return channel === "telegram" ? "Telegram" : "Клиент";
   }
@@ -990,16 +1021,6 @@
     textarea.dataset.field = "tg_template";
     textarea.value = tpl.tg_template;
 
-    const placeholders = document.createElement("p");
-    placeholders.className = "cabinet-app__template-placeholders";
-    placeholders.textContent = "Плейсхолдеры: ";
-    (tpl.placeholders || []).forEach((p, index) => {
-      if (index > 0) placeholders.append(" ");
-      const code = document.createElement("code");
-      code.textContent = `{${p}}`;
-      placeholders.append(code);
-    });
-
     const actions = document.createElement("div");
     actions.className = "cabinet-app__template-actions";
     const saveBtn = document.createElement("button");
@@ -1013,16 +1034,19 @@
     savedEl.textContent = "Сохранено";
     actions.append(saveBtn, savedEl);
 
-    card.append(head, textarea, placeholders, actions);
+    card.append(head, textarea, actions);
     return card;
   }
 
   function renderTemplateGroups(templates) {
     templatesList.innerHTML = "";
     const grouped = { client: [], telegram: [] };
+    const usedPlaceholderKeys = new Set();
+
     templates.forEach((tpl) => {
       const key = tpl.channel === "telegram" ? "telegram" : "client";
       grouped[key].push(tpl);
+      (tpl.placeholders || []).forEach((p) => usedPlaceholderKeys.add(p));
     });
 
     Object.entries(TEMPLATE_GROUPS)
@@ -1048,6 +1072,14 @@
         section.append(head, list);
         templatesList.appendChild(section);
       });
+
+    if (usedPlaceholderKeys.size) {
+      const order = Object.keys(PLACEHOLDER_LABELS);
+      const sortedKeys = [...usedPlaceholderKeys].sort(
+        (a, b) => order.indexOf(a) - order.indexOf(b)
+      );
+      templatesList.appendChild(buildPlaceholderLegend(sortedKeys));
+    }
 
     templatesList.querySelectorAll(".cabinet-app__template-save").forEach((btn) => {
       btn.addEventListener("click", () => saveTemplate(btn.dataset.eventType, btn));
