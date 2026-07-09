@@ -11,7 +11,7 @@
     overview: { eyebrow: "Обзор", title: "Главная" },
     bookings: { eyebrow: "Записи", title: "Записи клиентов" },
     calendar: { eyebrow: "Расписание", title: "Календарь" },
-    settings: { eyebrow: "Настройки", title: "Настройки предприятия" },
+    settings: { eyebrow: "Настройки", title: "Настройки и подписка" },
     telegram: { eyebrow: "Интеграции", title: "Telegram" },
     templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
   };
@@ -61,8 +61,7 @@
   const statActiveClients = document.getElementById("statActiveClients");
   const statRemindersWeek = document.getElementById("statRemindersWeek");
   const sidebarPlanBadge = document.getElementById("sidebarPlanBadge");
-  const planBanner = document.getElementById("planBanner");
-  const proUpgradeCard = document.getElementById("proUpgradeCard");
+  const trialPlanNote = document.getElementById("trialPlanNote");
   const proPriceLabel = document.getElementById("proPriceLabel");
   const upgradeProBtnOverview = document.getElementById("upgradeProBtnOverview");
   const nav = document.getElementById("nav");
@@ -197,55 +196,70 @@
   }
 
   function syncPlanUi(plan) {
-    if (!plan || !sidebarPlanBadge) return;
+    if (!plan) return;
+
     const isPro = plan.plan === "pro" && plan.subscription_status === "active";
-    sidebarPlanBadge.textContent = isPro ? "Pro" : "Trial";
-    sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
-
-    if (!planBanner) return;
-    if (isPro) {
-      planBanner.hidden = true;
-      planBanner.innerHTML = "";
-      if (proUpgradeCard) proUpgradeCard.hidden = true;
-      return;
-    }
-
+    const activePlan = isPro ? "pro" : "trial";
     const days = plan.trial_days_left ?? 0;
     const remaining = plan.reminders_remaining ?? 0;
     const price = plan.pro_price_rub ?? 4000;
-    if (proPriceLabel) proPriceLabel.textContent = `${price} ₽`;
-    let text = `Trial: осталось <strong>${days} дн.</strong> и <strong>${remaining}</strong> напоминаний из 100.`;
-    let showUpgrade = false;
+    const showUpgrade = !isPro && (!plan.is_trial_active || !plan.can_send_reminders);
 
-    if (!plan.is_trial_active) {
-      text = `Trial завершён. Перейдите на <strong>Pro (${price} ₽/мес)</strong> для продолжения работы.`;
-      showUpgrade = true;
-    } else if (!plan.can_send_reminders) {
-      text = `Лимит trial исчерпан. Перейдите на <strong>Pro (${price} ₽/мес)</strong>.`;
-      showUpgrade = true;
+    if (sidebarPlanBadge) {
+      sidebarPlanBadge.textContent = isPro ? "Pro" : "Trial";
+      sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
     }
 
-    if (proUpgradeCard) proUpgradeCard.hidden = !showUpgrade;
+    document.querySelectorAll("#cabinetStepApp .plan-card").forEach((card) => {
+      const planType = card.dataset.plan;
+      const isActive = planType === activePlan;
+      card.classList.toggle("is-active", isActive);
+      const badge = card.querySelector(".plan-card__badge");
+      if (badge) {
+        if (planType === "trial") {
+          badge.textContent = isActive ? "Активна" : "Trial";
+        } else {
+          badge.textContent = isActive ? "Активна" : "Pro";
+        }
+        badge.classList.toggle("plan-card__badge--active", isActive);
+        badge.hidden = false;
+      }
+    });
 
-    planBanner.innerHTML = showUpgrade
-      ? `<span class="cabinet-app__plan-banner-text">${text}</span>
-         <button type="button" class="btn btn--primary cabinet-app__upgrade-btn" id="upgradeProBtn">
-           Оплатить Pro — ${price} ₽
-         </button>`
-      : text;
-    planBanner.hidden = false;
+    if (trialPlanNote) {
+      if (isPro) {
+        trialPlanNote.textContent = "";
+        trialPlanNote.hidden = true;
+      } else if (!plan.is_trial_active) {
+        trialPlanNote.textContent = "Trial завершён.";
+        trialPlanNote.hidden = false;
+      } else if (!plan.can_send_reminders) {
+        trialPlanNote.textContent = "Лимит напоминаний исчерпан.";
+        trialPlanNote.hidden = false;
+      } else {
+        trialPlanNote.textContent = `Осталось ${days} дн. и ${remaining} напоминаний.`;
+        trialPlanNote.hidden = false;
+      }
+    }
 
-    const upgradeBtn = document.getElementById("upgradeProBtn");
-    if (upgradeBtn) {
-      upgradeBtn.addEventListener("click", startProPayment);
-    }
-    if (upgradeProBtnOverview) {
-      upgradeProBtnOverview.onclick = startProPayment;
-    }
+    const priceText = `${price.toLocaleString("ru-RU")} ₽`;
+    if (proPriceLabel) proPriceLabel.textContent = priceText;
+    document.querySelectorAll(".settings-pro-price").forEach((el) => {
+      el.textContent = priceText;
+    });
+
+    document.querySelectorAll(".settings-upgrade-btn, #upgradeProBtnOverview").forEach((btn) => {
+      btn.hidden = !showUpgrade;
+      btn.textContent = `Оплатить Pro — ${priceText}`;
+      btn.onclick = startProPayment;
+    });
   }
 
   async function startProPayment(ev) {
-    const btn = ev?.currentTarget || document.getElementById("upgradeProBtn");
+    const btn =
+      ev?.currentTarget ||
+      document.getElementById("upgradeProBtnOverview") ||
+      document.querySelector(".settings-upgrade-btn");
     setButtonLoading(btn, true, "Переход к оплате…");
     const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
     try {
@@ -1103,4 +1117,11 @@
   });
 
   handleBillingReturn();
+
+  const landingProBtn = document.getElementById("landingProBtn");
+  if (landingProBtn) {
+    landingProBtn.addEventListener("click", () => {
+      document.getElementById("openCabinet")?.click();
+    });
+  }
 })();

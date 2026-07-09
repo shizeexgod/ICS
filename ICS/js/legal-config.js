@@ -3,8 +3,8 @@
  * Перед подачей в ЮKassa заполните ownerName и inn.
  */
 window.ICS_LEGAL = {
-  ownerName: "",
-  inn: "",
+  ownerName: "Ремигайло Герман Андреевич",
+  inn: "781628450324",
   status: "Самозанятый (НПД)",
   email: "ICSnotify@yandex.ru",
   phone: "+79643704871",

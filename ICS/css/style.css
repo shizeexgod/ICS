@@ -948,9 +948,25 @@ h1, h2, h3, .brand__name, .nav a, .btn, .steps__num, .stat__num {
   .why-grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr 1fr; }
   .footer__grid { grid-template-columns: 1fr; }
+  .footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
   .hero { padding-top: 50px; }
+  .hero__title {
+    font-size: clamp(28px, 8vw, 40px);
+    line-height: 1.12;
+    overflow-wrap: break-word;
+  }
+  .hero__desc { font-size: 15px; }
   .hero__cta { flex-direction: column; width: 100%; }
   .btn { justify-content: center; width: 100%; }
+  .section__head h2 {
+    font-size: clamp(22px, 6vw, 32px);
+    line-height: 1.15;
+    overflow-wrap: break-word;
+  }
   .header {
     width: calc(100% - 20px);
     border-radius: 20px;
@@ -1085,7 +1101,10 @@ body.cabinet-open .footer {
 }
 .cabinet__step--app {
   height: min(88vh, 780px);
-  min-height: 520px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .cabinet__close {
@@ -1229,16 +1248,21 @@ body.cabinet-open .footer {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 .cabinet__booking-main {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  flex: 1;
 }
 .cabinet__booking-service {
   font-weight: 700;
   font-size: 15px;
   font-family: var(--font);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .cabinet__booking-company {
   font-size: 13px;
@@ -1314,7 +1338,9 @@ body.cabinet-open .footer {
   display: grid;
   grid-template-columns: 220px 1fr;
   height: 100%;
-  min-height: 520px;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
 }
 
 .cabinet-app__sidebar {
@@ -1460,13 +1486,18 @@ body.cabinet-open .footer {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .cabinet-app__view {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px 24px 24px;
+  overscroll-behavior: contain;
   animation: cabinet-step-in .35s cubic-bezier(.22,1,.36,1) both;
 }
 .cabinet-app__view[hidden] { display: none; }
@@ -1476,6 +1507,8 @@ body.cabinet-open .footer {
   font-size: 14.5px;
   line-height: 1.55;
   margin-bottom: 18px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .cabinet-app__lead strong { color: var(--text); }
 
@@ -1578,7 +1611,7 @@ body.cabinet-open .footer {
   flex-wrap: wrap;
 }
 .cabinet-app__copy code {
-  flex: 1;
+  flex: 1 1 160px;
   min-width: 0;
   padding: 12px 14px;
   border-radius: 12px;
@@ -1588,6 +1621,8 @@ body.cabinet-open .footer {
   font-size: 12px;
   color: var(--accent-2);
   word-break: break-all;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 .cabinet-app__copy-btn {
   flex-shrink: 0;
@@ -1830,6 +1865,133 @@ body.cabinet-open .footer {
   accent-color: var(--accent);
 }
 
+/* ============ Plans panel (Trial / Pro) ============ */
+.plans-panel {
+  margin-bottom: 20px;
+}
+
+.plans-panel__frame {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.plan-card {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-card.is-active {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.plan-card--pro.is-active {
+  border-color: color-mix(in srgb, #7ee787 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #7ee787 20%, transparent);
+}
+
+.plan-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.plan-card__head h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.plan-card__badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.plan-card__badge--active,
+.plan-card.is-active .plan-card__badge {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: rgba(var(--accent-rgb), 0.3);
+}
+
+.plan-card--pro.is-active .plan-card__badge {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.1);
+  border-color: rgba(126, 231, 135, 0.28);
+}
+
+.plan-card__price {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.plan-card__price strong {
+  color: var(--text);
+  font-size: 18px;
+  font-family: var(--font-display);
+}
+
+.plan-card__note {
+  font-size: 12.5px;
+  color: var(--accent);
+  margin: -4px 0 10px;
+  line-height: 1.4;
+}
+
+.plan-card__features {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-card__features li {
+  font-size: 13.5px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.plan-card__cta {
+  width: 100%;
+  margin-top: 14px;
+  justify-content: center;
+}
+
+.plans-panel--compact .plan-card {
+  padding: 14px 16px;
+}
+
+.plans-panel--compact .plan-card__features li {
+  font-size: 13px;
+}
+
+.plans-panel--cabinet {
+  margin-bottom: 16px;
+}
+
 /* ============ Cabinet calendar ============ */
 .cabinet-calendar {
   display: grid;
@@ -2009,19 +2171,37 @@ body.cabinet-open .footer {
 }
 @media (max-width: 560px) {
   .cabinet { padding: 0; align-items: flex-end; }
+  body.cabinet-open { overflow: hidden; }
   .cabinet__panel {
-    padding: 26px 18px 20px;
+    padding: 0;
     border-radius: 20px 20px 0 0;
-    max-height: 92vh;
+    max-height: 96dvh;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .cabinet__panel--wide {
-    max-height: 96vh;
+    max-height: 96dvh;
     border-radius: 18px 18px 0 0;
   }
   .cabinet__close { top: 12px; right: 12px; }
-  .cabinet__booking { flex-direction: column; }
-  .cabinet__booking-meta { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .cabinet__booking {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .cabinet__booking-meta {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .cabinet__confirm,
+  .cabinet__cancel {
+    flex: 1 1 auto;
+    min-width: 120px;
+    text-align: center;
+  }
 
   .cabinet-app {
     grid-template-columns: 1fr;
@@ -2029,14 +2209,21 @@ body.cabinet-open .footer {
     min-height: 0;
     height: 100%;
   }
-  .cabinet__step--app { min-height: 0; height: 96vh; }
+  .cabinet__step--app {
+    min-height: 0;
+    height: auto;
+    flex: 1;
+    max-height: 96dvh;
+  }
   .cabinet-app__sidebar {
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 12px 12px 10px;
-    gap: 10px;
+    padding: 10px 10px 8px;
+    gap: 8px;
+    flex-shrink: 0;
   }
-  .cabinet-app__brand { padding: 0 4px 4px; }
+  .cabinet-app__brand { padding: 0 4px 2px; }
+  .cabinet-app__brand-text strong { max-width: 140px; }
   .cabinet-app__nav {
     flex-direction: row;
     overflow-x: auto;
@@ -2045,23 +2232,40 @@ body.cabinet-open .footer {
     padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    flex: 0 0 auto;
   }
   .cabinet-app__nav::-webkit-scrollbar { display: none; }
   .cabinet-app__nav-btn {
     flex: 0 0 auto;
-    padding: 9px 12px;
-    font-size: 12.5px;
+    padding: 8px 10px;
+    font-size: 12px;
     white-space: nowrap;
+    gap: 6px;
+  }
+  .cabinet-app__nav-btn svg {
+    width: 16px;
+    height: 16px;
   }
   .cabinet-app__sidebar-foot { display: none; }
   .cabinet-app__logout-alt { display: inline-flex; }
-  .cabinet-app__top { padding: 14px 16px 0; }
-  .cabinet-app__view { padding: 12px 16px 18px; }
+  .cabinet-app__top { padding: 12px 14px 0; }
+  .cabinet-app__view { padding: 10px 14px 16px; }
   .cabinet-app__stats { grid-template-columns: 1fr; }
   .cabinet-app__cards { grid-template-columns: 1fr; }
   .cabinet-app__settings-grid { grid-template-columns: 1fr; }
+  .cabinet-app__settings { max-width: none; }
   .cabinet-app__template { flex-direction: column; align-items: flex-start; }
   .cabinet-app__template-editor-head { flex-direction: column; }
+  .cabinet-app__copy-btn { width: 100%; }
   .cabinet-calendar { grid-template-columns: 1fr; }
   .cabinet-calendar__form-row { grid-template-columns: 1fr; }
+  .plans-panel__frame { padding: 10px; border-radius: 16px; }
+  .plan-card { padding: 14px; }
+  .plan-card__head { flex-wrap: wrap; }
+  .plan-card__cta { margin-top: 12px; }
+  .cabinet__title { font-size: 22px; padding-right: 40px; }
+  .cabinet__panel:not(.cabinet__panel--wide) {
+    padding: 26px 18px 20px;
+    max-height: 92dvh;
+  }
 }

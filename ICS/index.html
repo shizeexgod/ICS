@@ -41,6 +41,7 @@
       <a href="#services"><span>Услуги</span></a>
       <a href="#channels"><span>Мессенджеры</span></a>
       <a href="#process"><span>Как это работает</span></a>
+      <a href="#pricing"><span>Тарифы</span></a>
       <a href="#contacts"><span>Контакты</span></a>
       <button type="button" class="nav__cabinet" id="openCabinet"><span>Личный кабинет</span></button>
     </nav>
@@ -314,6 +315,48 @@
     </ol>
   </section>
 
+  <!-- ТАРИФЫ -->
+  <section id="pricing" class="section container">
+    <div class="section__head">
+      <span class="eyebrow">Тарифы</span>
+      <h2>Выберите подписку</h2>
+    </div>
+
+    <div class="plans-panel">
+      <div class="plans-panel__frame">
+        <article class="plan-card" data-plan="trial">
+          <div class="plan-card__head">
+            <h3>Trial</h3>
+            <span class="plan-card__badge">Для старта</span>
+          </div>
+          <p class="plan-card__price">Бесплатно · 10 дней</p>
+          <ul class="plan-card__features">
+            <li>— до 100 напоминаний</li>
+            <li>— личный кабинет и календарь</li>
+            <li>— Telegram-уведомления админам</li>
+            <li>— шаблоны сообщений</li>
+            <li>— webhook для CRM</li>
+          </ul>
+        </article>
+
+        <article class="plan-card plan-card--pro" data-plan="pro">
+          <div class="plan-card__head">
+            <h3>Pro</h3>
+            <span class="plan-card__badge plan-card__badge--pro">Полный доступ</span>
+          </div>
+          <p class="plan-card__price"><strong>4 000 ₽</strong> / месяц</p>
+          <ul class="plan-card__features">
+            <li>— безлимитные напоминания</li>
+            <li>— все функции Trial</li>
+            <li>— приоритетная поддержка</li>
+            <li>— оплата через ЮKassa</li>
+          </ul>
+          <button type="button" class="btn btn--primary plan-card__cta" id="landingProBtn">Перейти в кабинет</button>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="cta container">
     <div class="cta__box">
@@ -369,8 +412,8 @@
   </div>
   <div class="container footer__bottom">
     <span>© 2026 ICS. Все права защищены.</span>
-    <span id="footerOwner" hidden></span>
-    <span id="footerInn" hidden></span>
+    <span id="footerOwner">Ремигайло Герман Андреевич</span>
+    <span id="footerInn">ИНН 781628450324</span>
     <span>Сервис автоматизации напоминаний о записи</span>
   </div>
 </footer>
@@ -509,15 +552,40 @@
           <!-- Главная -->
           <section class="cabinet-app__view is-active" data-view-panel="overview">
             <p class="cabinet-app__lead">Здравствуйте, <strong id="dashboardUserName">—</strong>. Здесь сводка по напоминаниям и подключению сервиса.</p>
-            <div class="cabinet-app__plan-banner" id="planBanner" hidden></div>
-            <div class="cabinet-app__cards" id="proUpgradeCard" hidden>
-              <article class="cabinet-app__card cabinet-app__card--pro">
-                <h3>ICS Pro</h3>
-                <p class="cabinet-app__hint">Безлимитные напоминания и полный доступ к сервису.</p>
-                <p class="cabinet-app__pro-price"><strong id="proPriceLabel">4000 ₽</strong> / месяц</p>
-                <button type="button" class="btn btn--primary" id="upgradeProBtnOverview">Перейти на Pro</button>
-              </article>
+
+            <div class="plans-panel plans-panel--cabinet" id="cabinetPlans">
+              <div class="plans-panel__frame">
+                <article class="plan-card" data-plan="trial">
+                  <div class="plan-card__head">
+                    <h3>Trial</h3>
+                    <span class="plan-card__badge" hidden>Активна</span>
+                  </div>
+                  <p class="plan-card__price">Бесплатно · 10 дней</p>
+                  <p class="plan-card__note" id="trialPlanNote"></p>
+                  <ul class="plan-card__features">
+                    <li>— до 100 напоминаний</li>
+                    <li>— личный кабинет и календарь</li>
+                    <li>— Telegram-уведомления</li>
+                    <li>— шаблоны и webhook</li>
+                  </ul>
+                </article>
+
+                <article class="plan-card plan-card--pro" data-plan="pro">
+                  <div class="plan-card__head">
+                    <h3>Pro</h3>
+                    <span class="plan-card__badge plan-card__badge--pro" hidden>Активна</span>
+                  </div>
+                  <p class="plan-card__price"><strong id="proPriceLabel">4 000 ₽</strong> / месяц</p>
+                  <ul class="plan-card__features">
+                    <li>— безлимитные напоминания</li>
+                    <li>— все функции Trial</li>
+                    <li>— приоритетная поддержка</li>
+                  </ul>
+                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeProBtnOverview" hidden>Оплатить Pro</button>
+                </article>
+              </div>
             </div>
+
             <div class="cabinet-app__stats">
               <article class="cabinet-app__stat">
                 <span class="cabinet-app__stat-label">Записи сегодня</span>
@@ -623,6 +691,34 @@
 
           <!-- Настройки -->
           <section class="cabinet-app__view" data-view-panel="settings" hidden>
+            <div class="plans-panel plans-panel--cabinet plans-panel--compact" id="settingsPlans">
+              <div class="plans-panel__frame">
+                <article class="plan-card" data-plan="trial">
+                  <div class="plan-card__head">
+                    <h3>Trial</h3>
+                    <span class="plan-card__badge" hidden>Активна</span>
+                  </div>
+                  <p class="plan-card__price">Бесплатно · 10 дней</p>
+                  <ul class="plan-card__features">
+                    <li>— до 100 напоминаний</li>
+                    <li>— базовый функционал</li>
+                  </ul>
+                </article>
+                <article class="plan-card plan-card--pro" data-plan="pro">
+                  <div class="plan-card__head">
+                    <h3>Pro</h3>
+                    <span class="plan-card__badge plan-card__badge--pro" hidden>Активна</span>
+                  </div>
+                  <p class="plan-card__price"><strong class="settings-pro-price">4 000 ₽</strong> / месяц</p>
+                  <ul class="plan-card__features">
+                    <li>— безлимитные напоминания</li>
+                    <li>— полный доступ</li>
+                  </ul>
+                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" hidden>Оплатить Pro</button>
+                </article>
+              </div>
+            </div>
+
             <form class="cabinet-app__settings" id="settingsForm">
               <div class="cabinet-app__settings-grid">
                 <label class="cabinet__field">
