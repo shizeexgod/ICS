@@ -45,7 +45,7 @@ class Company(Base):
     reminders_period_start: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    pro_price_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=4000)
+    pro_price_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=5000)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

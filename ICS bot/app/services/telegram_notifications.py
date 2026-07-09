@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot.callbacks import ConfirmBookingCallback
 from app.bot.main import bot
 from app.models.company_manager import CompanyManager
+from app.services.template_service import build_appointment_context, get_template_text
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +54,23 @@ async def notify_company_managers_of_new_booking(
         )
         return
 
-    message_text = (
-        "🆕 *Новая запись*\n\n"
-        f"🏢 *Компания:* {company_name}\n"
-        f"👤 *Клиент:* {client_name}\n"
-        f"📞 *Телефон:* {client_phone}\n"
-        f"💈 *Услуга:* {service_name}\n"
-        f"📅 *Дата:* {appointment_date.isoformat()}\n"
-        f"🕒 *Время:* {appointment_time.isoformat(timespec='minutes')}"
+    context = build_appointment_context(
+        client_name=client_name,
+        client_phone=client_phone,
+        company_name=company_name,
+        service_name=service_name,
+        appointment_date=appointment_date,
+        appointment_time=appointment_time,
     )
+    message_text, enabled = await get_template_text(
+        company_id, "new_booking", context=context
+    )
+    if not enabled or not message_text:
+        logger.info(
+            "new_booking template disabled for company_id=%s; skipping Telegram notification.",
+            company_id,
+        )
+        return
 
     keyboard_builder = InlineKeyboardBuilder()
     keyboard_builder.button(

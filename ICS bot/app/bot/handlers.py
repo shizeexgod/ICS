@@ -35,6 +35,7 @@ from app.models.client import Client
 from app.models.company import Company
 from app.models.company_manager import CompanyManager
 from app.services.notifications import notify_client
+from app.services.template_service import build_appointment_context, get_template_text
 
 logger = logging.getLogger(__name__)
 
@@ -232,15 +233,19 @@ async def handle_confirm_appointment(
     )
 
     client_phone: str | None = None
+    client_name: str | None = None
+    company_name: str | None = None
     service_name: str | None = None
     appointment_date = None
     appointment_time = None
+    company_id: uuid.UUID | None = None
 
     try:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(Appointment, Client)
+                select(Appointment, Client, Company)
                 .join(Client, Appointment.client_id == Client.id)
+                .join(Company, Appointment.company_id == Company.id)
                 .where(Appointment.id == appointment_id)
             )
             row = result.first()
@@ -249,7 +254,7 @@ async def handle_confirm_appointment(
                 await callback.answer("Запись не найдена (возможно, уже удалена).", show_alert=True)
                 return
 
-            appointment, client = row
+            appointment, client, company = row
 
             tg_chat_id = callback.message.chat.id if callback.message else None
             if tg_chat_id is not None:
@@ -274,6 +279,9 @@ async def handle_confirm_appointment(
             await session.commit()
 
             client_phone = client.phone
+            client_name = client.full_name
+            company_name = company.name
+            company_id = company.id
             service_name = appointment.service_name
             appointment_date = appointment.appointment_date
             appointment_time = appointment.appointment_time
@@ -300,12 +308,19 @@ async def handle_confirm_appointment(
                 appointment_id,
             )
 
-    if client_phone and appointment_date and appointment_time:
-        confirmation_text = (
-            f"✅ Ваша запись на «{service_name}» "
-            f"{appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')} "
-            "подтверждена!"
+    if client_phone and appointment_date and appointment_time and company_id:
+        context = build_appointment_context(
+            client_name=client_name or "",
+            company_name=company_name or "",
+            service_name=service_name or "",
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
         )
+        confirmation_text, enabled = await get_template_text(
+            company_id, "booking_confirmed", context=context
+        )
+        if not enabled or not confirmation_text:
+            return
         try:
             await notify_client(client_phone, confirmation_text)
         except Exception:  # noqa: BLE001 - a broken client notification must not break the callback

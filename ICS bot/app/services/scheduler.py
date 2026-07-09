@@ -24,7 +24,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import AsyncSessionLocal
 from app.models.appointment import Appointment, AppointmentStatus
+from app.models.company import Company
 from app.services.notifications import notify_client
+from app.services.plan_service import can_send_reminders, increment_reminders_used
+from app.services.template_service import build_appointment_context, get_template_text
 
 logger = logging.getLogger(__name__)
 
@@ -129,20 +132,55 @@ async def _send_appointment_reminder(appointment_id: uuid.UUID) -> None:
                 )
                 return
 
+            company_result = await session.execute(
+                select(Company).where(Company.id == appointment.company_id)
+            )
+            company = company_result.scalars().first()
+            if company is None:
+                logger.warning(
+                    "Reminder skipped: company not found for appointment_id=%s.", appointment_id
+                )
+                return
+
+            if not can_send_reminders(company):
+                logger.info(
+                    "Reminder skipped: trial limit reached or expired for company_id=%s.",
+                    company.id,
+                )
+                return
+
             client_phone = appointment.client.phone
+            client_name = appointment.client.full_name
             service_name = appointment.service_name
+            appointment_date = appointment.appointment_date
             appointment_time = appointment.appointment_time
+            company_id = appointment.company_id
+            company_name = company.name
     except Exception:  # noqa: BLE001 - a broken reminder job must never crash the scheduler
         logger.exception("Failed to load appointment_id=%s for its reminder job.", appointment_id)
         return
 
-    reminder_text = (
-        f"Напоминаем, вы записаны сегодня в {appointment_time.isoformat(timespec='minutes')} "
-        f"на услугу {service_name}!"
+    context = build_appointment_context(
+        client_name=client_name,
+        company_name=company_name,
+        service_name=service_name,
+        appointment_date=appointment_date,
+        appointment_time=appointment_time,
     )
+    reminder_text, enabled = await get_template_text(
+        company_id, "reminder", context=context
+    )
+    if not enabled or not reminder_text:
+        logger.info(
+            "reminder template disabled for appointment_id=%s; skipping.", appointment_id
+        )
+        return
 
     try:
         await notify_client(client_phone, reminder_text)
+        async with AsyncSessionLocal() as session:
+            await increment_reminders_used(session, company_id)
+            await session.commit()
     except Exception:  # noqa: BLE001 - a broken reminder job must never crash the scheduler
         logger.exception(
             "Failed to send reminder notifications for appointment_id=%s", appointment_id

@@ -38,7 +38,13 @@ from app.schemas.company import (
 )
 from app.services.auth_service import create_access_token, create_refresh_token, normalize_email
 from app.services.booking_service import create_company_appointment
+from app.services.notifications import notify_client
 from app.services.plan_service import company_plan_out, init_trial_fields
+from app.services.template_service import (
+    build_appointment_context,
+    get_template_text,
+    seed_default_templates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +112,7 @@ async def setup_company(
         await session.commit()
         await session.refresh(company)
         await session.refresh(user)
+        await seed_default_templates(company.id)
     except IntegrityError:
         await session.rollback()
         logger.exception("Failed to create company for user_id=%s", user.id)
@@ -314,15 +321,43 @@ async def update_company_appointment_status(
 ) -> dict[str, str]:
     """Update appointment status from the admin cabinet."""
     result = await session.execute(
-        select(Appointment).where(
+        select(Appointment, Client)
+        .join(Client, Appointment.client_id == Client.id)
+        .where(
             Appointment.id == appointment_id,
             Appointment.company_id == company.id,
         )
     )
-    appointment = result.scalar_one_or_none()
-    if appointment is None:
+    row = result.first()
+    if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
 
+    appointment, client = row
+    previous_status = appointment.status
     appointment.status = payload.status
     await session.commit()
+
+    if (
+        payload.status == AppointmentStatus.CANCELLED
+        and previous_status != AppointmentStatus.CANCELLED
+    ):
+        context = build_appointment_context(
+            client_name=client.full_name,
+            company_name=company.name,
+            service_name=appointment.service_name,
+            appointment_date=appointment.appointment_date,
+            appointment_time=appointment.appointment_time,
+        )
+        cancel_text, enabled = await get_template_text(
+            company.id, "booking_cancelled", context=context
+        )
+        if enabled and cancel_text:
+            try:
+                await notify_client(client.phone, cancel_text)
+            except Exception:
+                logger.exception(
+                    "Failed to send cancellation notification for appointment_id=%s",
+                    appointment_id,
+                )
+
     return {"message": "Status updated successfully"}

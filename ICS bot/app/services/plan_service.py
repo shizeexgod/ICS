@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import datetime as dt
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.schemas.company import (
@@ -79,3 +83,28 @@ def init_trial_fields(company: Company, *, now: dt.datetime | None = None) -> No
     company.reminders_used = 0
     company.reminders_period_start = now
     company.pro_price_rub = PRO_PRICE_RUB
+
+
+async def activate_pro_plan(session: AsyncSession, company_id: uuid.UUID) -> Company:
+    """Upgrade a company to Pro after successful payment."""
+    result = await session.execute(select(Company).where(Company.id == company_id))
+    company = result.scalar_one()
+    now = _utc_now()
+    company.plan = "pro"
+    company.subscription_status = "active"
+    company.reminders_used = 0
+    company.reminders_period_start = now
+    await session.flush()
+    return company
+
+
+async def increment_reminders_used(session: AsyncSession, company_id: uuid.UUID) -> None:
+    """Bump the trial reminder counter after a successful client reminder."""
+    result = await session.execute(select(Company).where(Company.id == company_id))
+    company = result.scalar_one_or_none()
+    if company is None:
+        return
+    if company.plan == "pro" and company.subscription_status == "active":
+        return
+    company.reminders_used += 1
+    await session.flush()

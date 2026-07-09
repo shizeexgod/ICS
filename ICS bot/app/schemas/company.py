@@ -10,9 +10,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.schemas.appointment import AppointmentListItem
 from app.schemas.auth import UserOut
 
-TRIAL_DAYS = 10
+TRIAL_DAYS = 7
 TRIAL_REMINDER_LIMIT = 100
-PRO_PRICE_RUB = 4000
+PRO_PRICE_RUB = 5000
 
 
 class CompanySetupRequest(BaseModel):

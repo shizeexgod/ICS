@@ -177,6 +177,8 @@
         "У вас уже активна подписка Pro.",
       "Failed to create payment. Please try again later.":
         "Не удалось создать платёж. Попробуйте позже.",
+      "Not Found":
+        "Раздел недоступен на сервере. Задеплойте бэкенд: git push amvera main:master",
     };
     return map[message] || message;
   }
@@ -202,7 +204,7 @@
     const activePlan = isPro ? "pro" : "trial";
     const days = plan.trial_days_left ?? 0;
     const remaining = plan.reminders_remaining ?? 0;
-    const price = plan.pro_price_rub ?? 4000;
+    const price = plan.pro_price_rub ?? 5000;
     const showUpgrade = !isPro && (!plan.is_trial_active || !plan.can_send_reminders);
 
     if (sidebarPlanBadge) {
@@ -501,7 +503,7 @@
       const msg = Array.isArray(detail)
         ? detail.map((d) => d.msg || d).join(", ")
         : detail || data.message || "Ошибка сервера";
-      throw new Error(msg);
+      throw new Error(formatApiError(msg));
     }
     return data;
   }
@@ -935,6 +937,123 @@
     }
   }
 
+  const TEMPLATE_GROUPS = {
+    client: {
+      label: "Для клиента",
+      hint: "Сообщения клиентам в WhatsApp / SMS",
+      order: 1,
+    },
+    telegram: {
+      label: "Для сотрудников",
+      hint: "Уведомления администраторам в Telegram",
+      order: 2,
+    },
+  };
+
+  function channelLabel(channel) {
+    return channel === "telegram" ? "Telegram" : "Клиент";
+  }
+
+  function buildTemplateCard(tpl) {
+    const card = document.createElement("article");
+    card.className = "cabinet-app__template-editor";
+    card.dataset.eventType = tpl.event_type;
+
+    const head = document.createElement("div");
+    head.className = "cabinet-app__template-editor-head";
+    head.innerHTML = `
+      <div>
+        <h3></h3>
+        <p></p>
+      </div>
+      <div class="cabinet-app__template-editor-meta">
+        <span class="cabinet-app__template-channel"></span>
+        <label class="cabinet-app__toggle">
+          <input type="checkbox" class="cabinet-app__toggle-input" data-field="is_enabled">
+          <span>Вкл.</span>
+        </label>
+      </div>`;
+    head.querySelector("h3").textContent = tpl.title;
+    head.querySelector("p").textContent = tpl.description;
+    const channelBadge = head.querySelector(".cabinet-app__template-channel");
+    channelBadge.textContent = channelLabel(tpl.channel);
+    channelBadge.classList.add(
+      tpl.channel === "telegram"
+        ? "cabinet-app__template-channel--telegram"
+        : "cabinet-app__template-channel--client"
+    );
+    head.querySelector('[data-field="is_enabled"]').checked = !!tpl.is_enabled;
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "cabinet-app__template-text";
+    textarea.rows = 5;
+    textarea.dataset.field = "tg_template";
+    textarea.value = tpl.tg_template;
+
+    const placeholders = document.createElement("p");
+    placeholders.className = "cabinet-app__template-placeholders";
+    placeholders.textContent = "Плейсхолдеры: ";
+    (tpl.placeholders || []).forEach((p, index) => {
+      if (index > 0) placeholders.append(" ");
+      const code = document.createElement("code");
+      code.textContent = `{${p}}`;
+      placeholders.append(code);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "cabinet-app__template-actions";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn btn--primary cabinet-app__template-save";
+    saveBtn.dataset.eventType = tpl.event_type;
+    saveBtn.textContent = "Сохранить";
+    const savedEl = document.createElement("span");
+    savedEl.className = "cabinet-app__saved cabinet-app__template-saved";
+    savedEl.hidden = true;
+    savedEl.textContent = "Сохранено";
+    actions.append(saveBtn, savedEl);
+
+    card.append(head, textarea, placeholders, actions);
+    return card;
+  }
+
+  function renderTemplateGroups(templates) {
+    templatesList.innerHTML = "";
+    const grouped = { client: [], telegram: [] };
+    templates.forEach((tpl) => {
+      const key = tpl.channel === "telegram" ? "telegram" : "client";
+      grouped[key].push(tpl);
+    });
+
+    Object.entries(TEMPLATE_GROUPS)
+      .sort((a, b) => a[1].order - b[1].order)
+      .forEach(([channel, meta]) => {
+        const items = grouped[channel];
+        if (!items?.length) return;
+
+        const section = document.createElement("section");
+        section.className = "cabinet-app__template-group";
+        section.dataset.channel = channel;
+
+        const head = document.createElement("header");
+        head.className = "cabinet-app__template-group-head";
+        head.innerHTML = `<h3></h3><p></p>`;
+        head.querySelector("h3").textContent = meta.label;
+        head.querySelector("p").textContent = meta.hint;
+
+        const list = document.createElement("div");
+        list.className = "cabinet-app__template-group-list";
+        items.forEach((tpl) => list.appendChild(buildTemplateCard(tpl)));
+
+        section.append(head, list);
+        templatesList.appendChild(section);
+      });
+
+    templatesList.querySelectorAll(".cabinet-app__template-save").forEach((btn) => {
+      btn.addEventListener("click", () => saveTemplate(btn.dataset.eventType, btn));
+    });
+  }
+
   async function loadTemplates() {
     if (!templatesList || !templatesLoading) return;
     templatesList.innerHTML = "";
@@ -953,69 +1072,14 @@
 
       if (!templates.length) {
         templatesList.innerHTML =
-          '<p class="cabinet__empty">Шаблоны не найдены.</p>';
+          '<p class="cabinet__empty">Шаблоны не найдены. Обновите бэкенд на Amvera.</p>';
         return;
       }
 
-      templates.forEach((tpl) => {
-        const card = document.createElement("article");
-        card.className = "cabinet-app__template-editor";
-        card.dataset.eventType = tpl.event_type;
-
-        const head = document.createElement("div");
-        head.className = "cabinet-app__template-editor-head";
-        head.innerHTML = `
-          <div>
-            <h3></h3>
-            <p></p>
-          </div>
-          <label class="cabinet-app__toggle">
-            <input type="checkbox" class="cabinet-app__toggle-input" data-field="is_enabled">
-            <span>Вкл.</span>
-          </label>`;
-        head.querySelector("h3").textContent = tpl.title;
-        head.querySelector("p").textContent = tpl.description;
-        head.querySelector('[data-field="is_enabled"]').checked = !!tpl.is_enabled;
-
-        const textarea = document.createElement("textarea");
-        textarea.className = "cabinet-app__template-text";
-        textarea.rows = 5;
-        textarea.dataset.field = "tg_template";
-        textarea.value = tpl.tg_template;
-
-        const placeholders = document.createElement("p");
-        placeholders.className = "cabinet-app__template-placeholders";
-        placeholders.textContent = "Плейсхолдеры: ";
-        (tpl.placeholders || []).forEach((p, index) => {
-          if (index > 0) placeholders.append(" ");
-          const code = document.createElement("code");
-          code.textContent = `{${p}}`;
-          placeholders.append(code);
-        });
-
-        const actions = document.createElement("div");
-        actions.className = "cabinet-app__template-actions";
-        const saveBtn = document.createElement("button");
-        saveBtn.type = "button";
-        saveBtn.className = "btn btn--primary cabinet-app__template-save";
-        saveBtn.dataset.eventType = tpl.event_type;
-        saveBtn.textContent = "Сохранить";
-        const savedEl = document.createElement("span");
-        savedEl.className = "cabinet-app__saved cabinet-app__template-saved";
-        savedEl.hidden = true;
-        savedEl.textContent = "Сохранено";
-        actions.append(saveBtn, savedEl);
-
-        card.append(head, textarea, placeholders, actions);
-        templatesList.appendChild(card);
-      });
-
-      templatesList.querySelectorAll(".cabinet-app__template-save").forEach((btn) => {
-        btn.addEventListener("click", () => saveTemplate(btn.dataset.eventType, btn));
-      });
+      renderTemplateGroups(templates);
     } catch (err) {
       templatesLoading.remove();
-      templatesList.innerHTML = `<p class="cabinet__error">${err.message}</p>`;
+      templatesList.innerHTML = `<p class="cabinet__error">${formatApiError(err.message)}</p>`;
     }
   }
 

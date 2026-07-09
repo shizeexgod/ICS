@@ -91,6 +91,20 @@ class Settings(BaseSettings):
     SMTP_USER: str = Field(default="", description="SMTP login / From address.")
     SMTP_PASSWORD: str = Field(default="", description="SMTP password or app password.")
 
+    # --- YooKassa (Pro subscription billing) --------------------------------
+    YOOKASSA_SHOP_ID: str = Field(
+        default="",
+        description="YooKassa shop id (merchant id).",
+    )
+    YOOKASSA_SECRET_KEY: str = Field(
+        default="",
+        description="YooKassa secret key for API and webhooks.",
+    )
+    YOOKASSA_RETURN_URL: str = Field(
+        default="",
+        description="Default return URL after payment (frontend cabinet page).",
+    )
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _ensure_async_driver(cls, value: str) -> str:

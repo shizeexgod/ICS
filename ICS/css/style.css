@@ -187,19 +187,19 @@ h1, h2, h3,
   box-shadow: var(--shadow-soft);
   transition: background .4s ease, border-color .4s ease, box-shadow .4s ease;
   transform: translateZ(0);
-  overflow: hidden;
+  overflow: visible;
 }
 .header.is-nav-open {
   overflow: visible;
 }
 
 .header__inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   height: 72px;
   padding: 0 22px;
-  gap: 20px;
+  gap: 16px;
 }
 
 .brand {
@@ -241,8 +241,10 @@ h1, h2, h3,
 .nav {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  margin: 0 auto;
+  margin: 0;
+  min-width: 0;
 }
 .nav a {
   position: relative;
@@ -294,7 +296,13 @@ h1, h2, h3,
   box-shadow: 0 8px 20px rgba(77, 141, 255, 0.28);
 }
 
-.header__actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
 
 .icon-btn {
   width: 40px;
@@ -327,7 +335,6 @@ h1, h2, h3,
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
-  overflow: hidden;
   flex-shrink: 0;
 }
 .theme-switch__btn {
@@ -397,11 +404,12 @@ h1, h2, h3,
 
 .hero__title {
   font-family: var(--font);
-  font-size: clamp(28px, 4.4vw, 47px);
+  font-size: clamp(30px, 4.9vw, 50px);
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.22;
-  max-width: 780px;
+  line-height: 1.2;
+  max-width: 900px;
+  width: 100%;
   animation: fade-up .7s ease .08s both;
 }
 
@@ -968,6 +976,11 @@ h1, h2, h3,
 .steps li:nth-child(odd) { --i: 1; } .steps li:nth-child(even) { --i: 2; }
 
 /* ============ Responsive ============ */
+@media (max-width: 1100px) and (min-width: 981px) {
+  .nav a { padding: 8px 11px; font-size: 13px; }
+  .nav__cabinet { padding: 8px 12px; font-size: 13px; }
+}
+
 @media (max-width: 980px) {
   .nav { display: none; }
   .burger { display: flex; }
@@ -1014,6 +1027,16 @@ h1, h2, h3,
     height: 60px;
     padding: 0 12px;
     gap: 8px;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .brand {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .header__actions {
+    flex: 0 0 auto;
+    gap: 6px;
   }
   .brand__sub { display: none; }
   .brand__name { font-size: 16px; }
@@ -1795,7 +1818,56 @@ body.cabinet-open .footer {
 .cabinet-app__template-list {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.cabinet-app__template-group {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.cabinet-app__template-group-head h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.cabinet-app__template-group-head p {
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+.cabinet-app__template-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cabinet-app__template-channel {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-faint);
+}
+
+.cabinet-app__template-channel--client {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+
+.cabinet-app__template-channel--telegram {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.08);
+  border-color: rgba(126, 231, 135, 0.22);
 }
 .cabinet-app__template {
   display: flex;
@@ -1828,11 +1900,23 @@ body.cabinet-open .footer {
   background: var(--surface-2);
 }
 
+.cabinet-app__template-editor-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .cabinet-app__template-editor-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.cabinet-app__template-editor-head .cabinet-app__toggle {
+  margin-top: 0;
 }
 
 .cabinet-app__template-editor h3 {
@@ -2339,6 +2423,12 @@ body.cabinet-open .footer {
   .cabinet-app__settings { max-width: none; }
   .cabinet-app__template { flex-direction: column; align-items: flex-start; }
   .cabinet-app__template-editor-head { flex-direction: column; }
+  .cabinet-app__template-editor-meta {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: space-between;
+  }
   .cabinet-app__copy-btn { width: 100%; }
   .cabinet-calendar { grid-template-columns: 1fr; }
   .cabinet-calendar__form-row { grid-template-columns: 1fr; }

@@ -14,6 +14,6 @@ window.ICS_LEGAL = {
   serviceName: "ICS",
   serviceDescription:
     "Сервис автоматических напоминаний о записи для бизнеса (Telegram, WhatsApp, MAX).",
-  proPriceRub: 4000,
+  proPriceRub: 5000,
   siteUrl: "https://ics-system.vercel.app",
 };
