@@ -1470,43 +1470,160 @@ body.cabinet-open .footer {
 .cabinet-staff__form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.cabinet-staff__panel {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(var(--surface-rgb), 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 .cabinet-staff__form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.cabinet-staff__field--phone {
+  grid-column: 1 / -1;
+}
+.cabinet-staff__role-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cabinet-staff__role-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.cabinet-staff__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cabinet-staff__role-btn {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.cabinet-staff__role-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.cabinet-staff__role-btn.is-active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.cabinet-staff__role-btn:focus {
+  outline: none;
+}
+.cabinet-staff__role-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.cabinet-staff__form-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cabinet-staff__submit {
+  min-width: 200px;
+}
 .cabinet-staff__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .cabinet-staff__item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(var(--surface-rgb), 0.45);
+}
+.cabinet-staff__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: linear-gradient(155deg, var(--accent-soft), transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  text-transform: uppercase;
 }
 .cabinet-staff__info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
+}
+.cabinet-staff__name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .cabinet-staff__name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
 }
+.cabinet-staff__role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface);
+}
+.cabinet-staff__role-badge--owner,
+.cabinet-staff__role-badge--director {
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent-2) 10%, transparent);
+}
+.cabinet-staff__role-badge--administrator {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--accent-soft);
+}
 .cabinet-staff__meta {
   font-size: 12px;
   color: var(--text-dim);
+  line-height: 1.4;
+}
+.cabinet-staff__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .cabinet-staff__status {
   display: inline-flex;
@@ -1518,27 +1635,65 @@ body.cabinet-open .footer {
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--text-dim);
+  white-space: nowrap;
+}
+.cabinet-staff__status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
 }
 .cabinet-staff__status.is-connected {
   color: #7ee787;
   border-color: rgba(126, 231, 135, 0.25);
   background: rgba(126, 231, 135, 0.08);
 }
-.cabinet-staff__actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+.cabinet-staff__status.is-connected::before {
+  opacity: 1;
+  background: #7ee787;
 }
 .cabinet-staff__actions button {
   font-size: 12px;
   padding: 6px 10px;
 }
+.cabinet-staff__empty {
+  padding: 18px 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  background: rgba(var(--surface-rgb), 0.25);
+  text-align: center;
+}
+.cabinet-staff__empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.cabinet-staff__empty code {
+  font-size: 11px;
+  color: var(--accent-2);
+}
 @media (max-width: 700px) {
   .cabinet-staff__form-grid {
     grid-template-columns: 1fr;
   }
+  .cabinet-staff__field--phone {
+    grid-column: auto;
+  }
   .cabinet-staff__item {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
+  }
+  .cabinet-staff__aside {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .cabinet-staff__submit {
+    width: 100%;
   }
 }
 .cabinet__cancel:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -762,39 +762,49 @@
               <article class="cabinet-app__card cabinet-app__card--wide">
                 <div class="cabinet-app__card-head">
                   <h3>Сотрудники</h3>
-                  <span class="cabinet-app__badge" id="staffCountBadge">0</span>
+                  <span class="cabinet-app__badge cabinet-app__badge--muted" id="staffCountBadge">0</span>
                 </div>
                 <p class="cabinet-app__hint">Укажите имя и Telegram @username сотрудника. После добавления он отправляет боту API-ключ компании — и чат привяжется автоматически.</p>
 
                 <form class="cabinet-staff__form" id="staffCreateForm">
-                  <div class="cabinet-staff__form-grid">
-                    <label class="cabinet__field">
-                      <span>Имя</span>
-                      <input type="text" name="full_name" id="staffFullName" required minlength="2" placeholder="Анна Петрова">
-                    </label>
-                    <label class="cabinet__field">
-                      <span>Telegram @username</span>
-                      <input type="text" name="telegram_username" id="staffTelegramUsername" placeholder="@anna_admin">
-                    </label>
-                    <label class="cabinet__field">
-                      <span>Телефон</span>
-                      <input type="tel" name="phone" id="staffPhone" placeholder="+7 999 123-45-67">
-                    </label>
-                    <label class="cabinet__field">
-                      <span>Роль</span>
-                      <select name="role" id="staffRole">
-                        <option value="manager">Менеджер</option>
-                        <option value="admin">Администратор</option>
-                        <option value="receptionist">Ресепшен</option>
-                      </select>
-                    </label>
+                  <div class="cabinet-staff__panel">
+                    <div class="cabinet-staff__form-grid">
+                      <label class="cabinet__field">
+                        <span>Имя и фамилия</span>
+                        <input type="text" name="full_name" id="staffFullName" required minlength="2" placeholder="Анна Петрова" autocomplete="name">
+                      </label>
+                      <label class="cabinet__field">
+                        <span>Telegram <span class="cabinet__optional">@username</span></span>
+                        <input type="text" name="telegram_username" id="staffTelegramUsername" placeholder="@anna_admin" autocomplete="off" spellcheck="false">
+                      </label>
+                      <label class="cabinet__field cabinet-staff__field--phone">
+                        <span>Телефон <span class="cabinet__optional">необязательно</span></span>
+                        <input type="tel" name="phone" id="staffPhone" placeholder="+7 999 123-45-67" autocomplete="tel">
+                      </label>
+                    </div>
+
+                    <div class="cabinet-staff__role-field">
+                      <span class="cabinet-staff__role-label">Роль в компании</span>
+                      <input type="hidden" name="role" id="staffRole" value="employee">
+                      <div class="cabinet-staff__roles" id="staffRolePicker" role="radiogroup" aria-label="Роль сотрудника">
+                        <button type="button" class="cabinet-staff__role-btn is-active" data-role="employee" aria-pressed="true">Сотрудник</button>
+                        <button type="button" class="cabinet-staff__role-btn" data-role="administrator" aria-pressed="false">Администратор</button>
+                        <button type="button" class="cabinet-staff__role-btn" data-role="director" aria-pressed="false">Директор</button>
+                        <button type="button" class="cabinet-staff__role-btn" data-role="owner" aria-pressed="false">Владелец</button>
+                      </div>
+                    </div>
                   </div>
-                  <p class="cabinet__error" id="staffCreateError" hidden></p>
-                  <button type="submit" class="btn btn--primary">Добавить сотрудника</button>
+
+                  <div class="cabinet-staff__form-foot">
+                    <p class="cabinet__error" id="staffCreateError" hidden></p>
+                    <button type="submit" class="btn btn--primary cabinet-staff__submit">Добавить сотрудника</button>
+                  </div>
                 </form>
 
                 <div class="cabinet-staff__list" id="staffList">
-                  <p class="cabinet-app__empty-inline">Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>
+                  <div class="cabinet-staff__empty">
+                    <p>Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>
+                  </div>
                 </div>
               </article>
 

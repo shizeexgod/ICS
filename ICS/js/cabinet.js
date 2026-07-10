@@ -317,11 +317,50 @@
     }
   }
 
+  const staffRolePicker = document.getElementById("staffRolePicker");
+  const staffRoleInput = document.getElementById("staffRole");
+
   const ROLE_LABELS = {
-    manager: "Менеджер",
+    owner: "Владелец",
+    director: "Директор",
+    administrator: "Администратор",
+    employee: "Сотрудник",
+    manager: "Сотрудник",
     admin: "Администратор",
     receptionist: "Ресепшен",
   };
+
+  function getRoleLabel(role) {
+    return ROLE_LABELS[role] || role || "Сотрудник";
+  }
+
+  function getStaffInitials(name) {
+    const parts = String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2);
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`;
+  }
+
+  function setStaffRole(role) {
+    const value = role || "employee";
+    if (staffRoleInput) staffRoleInput.value = value;
+    staffRolePicker?.querySelectorAll(".cabinet-staff__role-btn").forEach((btn) => {
+      const active = btn.dataset.role === value;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function initStaffRolePicker() {
+    if (!staffRolePicker) return;
+    staffRolePicker.querySelectorAll(".cabinet-staff__role-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setStaffRole(btn.dataset.role));
+    });
+    setStaffRole(staffRoleInput?.value || "employee");
+  }
 
   function formatStaffMeta(staff) {
     const parts = [];
@@ -331,8 +370,7 @@
     if (staff.phone) {
       parts.push(staff.phone);
     }
-    parts.push(ROLE_LABELS[staff.role] || staff.role);
-    return parts.join(" · ");
+    return parts.join(" · ") || "Telegram @username не указан";
   }
 
   function renderStaffList(staffItems) {
@@ -343,8 +381,11 @@
     }
 
     if (!active.length) {
-      staffList.innerHTML =
-        '<p class="cabinet-app__empty-inline">Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>';
+      staffList.innerHTML = `
+        <div class="cabinet-staff__empty">
+          <p>Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>
+        </div>
+      `;
       return;
     }
 
@@ -352,15 +393,23 @@
       .map((staff) => {
         const connected = staff.is_connected;
         const statusClass = connected ? "is-connected" : "";
-        const statusText = connected ? "Подключён" : "Ожидает подключения";
+        const statusText = connected ? "Подключён" : "Ожидает";
+        const role = staff.role || "employee";
+        const roleClass = ["owner", "director", "administrator"].includes(role)
+          ? ` cabinet-staff__role-badge--${role}`
+          : "";
         return `
           <article class="cabinet-staff__item" data-staff-id="${staff.id}">
+            <div class="cabinet-staff__avatar" aria-hidden="true">${getStaffInitials(staff.full_name)}</div>
             <div class="cabinet-staff__info">
-              <span class="cabinet-staff__name">${staff.full_name}</span>
+              <div class="cabinet-staff__name-row">
+                <span class="cabinet-staff__name">${staff.full_name}</span>
+                <span class="cabinet-staff__role-badge${roleClass}">${getRoleLabel(role)}</span>
+              </div>
               <span class="cabinet-staff__meta">${formatStaffMeta(staff)}</span>
-              <span class="cabinet-staff__status ${statusClass}">${statusText}</span>
             </div>
-            <div class="cabinet-staff__actions">
+            <div class="cabinet-staff__aside">
+              <span class="cabinet-staff__status ${statusClass}">${statusText}</span>
               <button type="button" class="btn btn--ghost" data-staff-delete="${staff.id}">Удалить</button>
             </div>
           </article>
@@ -380,8 +429,11 @@
       renderStaffList(staffItems || []);
     } catch {
       if (staffCountBadge) staffCountBadge.textContent = "0";
-      staffList.innerHTML =
-        '<p class="cabinet-app__empty-inline">Не удалось загрузить список сотрудников.</p>';
+      staffList.innerHTML = `
+        <div class="cabinet-staff__empty">
+          <p>Не удалось загрузить список сотрудников. Задеплойте бэкенд: <code>git push amvera main:master</code></p>
+        </div>
+      `;
     }
   }
 
@@ -421,7 +473,7 @@
         .map((m) => {
           const name = m.full_name || "Сотрудник";
           const username = m.telegram_username ? `@${m.telegram_username}` : "";
-          const role = m.role ? (ROLE_LABELS[m.role] || m.role) : "";
+          const role = m.role ? getRoleLabel(m.role) : "";
           const meta = [username, role].filter(Boolean).join(" · ");
           return `<p class="cabinet-app__manager-item"><strong>${name}</strong>${meta ? ` — ${meta}` : ""}<br>Chat ID: <code>${m.tg_chat_id}</code></p>`;
         })
@@ -1254,7 +1306,7 @@
       full_name: String(formData.get("full_name") || "").trim(),
       telegram_username: String(formData.get("telegram_username") || "").trim() || null,
       phone: String(formData.get("phone") || "").trim() || null,
-      role: String(formData.get("role") || "manager"),
+      role: String(formData.get("role") || "employee"),
     };
 
     try {
@@ -1263,6 +1315,7 @@
         body: JSON.stringify(payload),
       });
       staffCreateForm.reset();
+      setStaffRole("employee");
       await loadStaffList();
       await loadTelegramStatus();
     } catch (err) {
@@ -1271,6 +1324,8 @@
       setButtonLoading(submitBtn, false);
     }
   });
+
+  initStaffRolePicker();
 
   calendarPrevMonth?.addEventListener("click", () => shiftCalendarMonth(-1));
   calendarNextMonth?.addEventListener("click", () => shiftCalendarMonth(1));
