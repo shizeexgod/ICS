@@ -57,6 +57,10 @@
   const telegramApiKey = document.getElementById("telegramApiKey");
   const telegramStatus = document.getElementById("telegramStatus");
   const telegramManagersList = document.getElementById("telegramManagersList");
+  const staffCreateForm = document.getElementById("staffCreateForm");
+  const staffCreateError = document.getElementById("staffCreateError");
+  const staffList = document.getElementById("staffList");
+  const staffCountBadge = document.getElementById("staffCountBadge");
   const statAppointmentsToday = document.getElementById("statAppointmentsToday");
   const statActiveClients = document.getElementById("statActiveClients");
   const statRemindersWeek = document.getElementById("statRemindersWeek");
@@ -313,6 +317,88 @@
     }
   }
 
+  const ROLE_LABELS = {
+    manager: "Менеджер",
+    admin: "Администратор",
+    receptionist: "Ресепшен",
+  };
+
+  function formatStaffMeta(staff) {
+    const parts = [];
+    if (staff.telegram_username) {
+      parts.push(`@${staff.telegram_username}`);
+    }
+    if (staff.phone) {
+      parts.push(staff.phone);
+    }
+    parts.push(ROLE_LABELS[staff.role] || staff.role);
+    return parts.join(" · ");
+  }
+
+  function renderStaffList(staffItems) {
+    if (!staffList) return;
+    const active = staffItems.filter((s) => s.is_active);
+    if (staffCountBadge) {
+      staffCountBadge.textContent = String(active.length);
+    }
+
+    if (!active.length) {
+      staffList.innerHTML =
+        '<p class="cabinet-app__empty-inline">Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>';
+      return;
+    }
+
+    staffList.innerHTML = active
+      .map((staff) => {
+        const connected = staff.is_connected;
+        const statusClass = connected ? "is-connected" : "";
+        const statusText = connected ? "Подключён" : "Ожидает подключения";
+        return `
+          <article class="cabinet-staff__item" data-staff-id="${staff.id}">
+            <div class="cabinet-staff__info">
+              <span class="cabinet-staff__name">${staff.full_name}</span>
+              <span class="cabinet-staff__meta">${formatStaffMeta(staff)}</span>
+              <span class="cabinet-staff__status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="cabinet-staff__actions">
+              <button type="button" class="btn btn--ghost" data-staff-delete="${staff.id}">Удалить</button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+
+    staffList.querySelectorAll("[data-staff-delete]").forEach((btn) => {
+      btn.addEventListener("click", () => deleteStaff(btn.dataset.staffDelete, btn));
+    });
+  }
+
+  async function loadStaffList() {
+    if (!staffList) return;
+    try {
+      const staffItems = await apiFetch("/api/v1/company/staff");
+      renderStaffList(staffItems || []);
+    } catch {
+      if (staffCountBadge) staffCountBadge.textContent = "0";
+      staffList.innerHTML =
+        '<p class="cabinet-app__empty-inline">Не удалось загрузить список сотрудников.</p>';
+    }
+  }
+
+  async function deleteStaff(staffId, btn) {
+    if (!staffId) return;
+    if (!confirm("Удалить сотрудника из списка?")) return;
+    setButtonLoading(btn, true, "Удаление…");
+    try {
+      await apiFetch(`/api/v1/company/staff/${staffId}`, { method: "DELETE" });
+      await loadStaffList();
+      await loadTelegramStatus();
+    } catch (err) {
+      alert(err.message);
+      setButtonLoading(btn, false);
+    }
+  }
+
   async function loadTelegramStatus() {
     if (!telegramStatus) return;
     try {
@@ -328,14 +414,17 @@
       if (!telegramManagersList) return;
       if (!data.managers?.length) {
         telegramManagersList.innerHTML =
-          '<p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-админов.</p>';
+          '<p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-чатов.</p>';
         return;
       }
       telegramManagersList.innerHTML = data.managers
-        .map(
-          (m) =>
-            `<p class="cabinet-app__manager-item">Chat ID: <code>${m.tg_chat_id}</code></p>`
-        )
+        .map((m) => {
+          const name = m.full_name || "Сотрудник";
+          const username = m.telegram_username ? `@${m.telegram_username}` : "";
+          const role = m.role ? (ROLE_LABELS[m.role] || m.role) : "";
+          const meta = [username, role].filter(Boolean).join(" · ");
+          return `<p class="cabinet-app__manager-item"><strong>${name}</strong>${meta ? ` — ${meta}` : ""}<br>Chat ID: <code>${m.tg_chat_id}</code></p>`;
+        })
         .join("");
     } catch {
       telegramStatus.textContent = "Не подключено";
@@ -425,6 +514,7 @@
       loadDashboardStats();
       loadTelegramStatus();
     } else if (viewId === "telegram") {
+      loadStaffList();
       loadTelegramStatus();
     } else if (viewId === "templates") {
       loadTemplates();
@@ -1152,6 +1242,35 @@
       btn.disabled = false;
     }
   }
+
+  staffCreateForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    showError(staffCreateError, "");
+    const submitBtn = staffCreateForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true, "Добавление…");
+
+    const formData = new FormData(staffCreateForm);
+    const payload = {
+      full_name: String(formData.get("full_name") || "").trim(),
+      telegram_username: String(formData.get("telegram_username") || "").trim() || null,
+      phone: String(formData.get("phone") || "").trim() || null,
+      role: String(formData.get("role") || "manager"),
+    };
+
+    try {
+      await apiFetch("/api/v1/company/staff", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      staffCreateForm.reset();
+      await loadStaffList();
+      await loadTelegramStatus();
+    } catch (err) {
+      showError(staffCreateError, formatApiError(err.message));
+    } finally {
+      setButtonLoading(submitBtn, false);
+    }
+  });
 
   calendarPrevMonth?.addEventListener("click", () => shiftCalendarMonth(-1));
   calendarNextMonth?.addEventListener("click", () => shiftCalendarMonth(1));

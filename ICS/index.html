@@ -756,26 +756,69 @@
 
           <!-- Telegram -->
           <section class="cabinet-app__view" data-view-panel="telegram" hidden>
+            <p class="cabinet-app__lead">Добавьте сотрудников предприятия — бот распознает их по Telegram @username и будет отправлять уведомления только им. Клиенты подключаются отдельно: делятся номером телефона и видят свои записи.</p>
+
             <div class="cabinet-app__cards">
+              <article class="cabinet-app__card cabinet-app__card--wide">
+                <div class="cabinet-app__card-head">
+                  <h3>Сотрудники</h3>
+                  <span class="cabinet-app__badge" id="staffCountBadge">0</span>
+                </div>
+                <p class="cabinet-app__hint">Укажите имя и Telegram @username сотрудника. После добавления он отправляет боту API-ключ компании — и чат привяжется автоматически.</p>
+
+                <form class="cabinet-staff__form" id="staffCreateForm">
+                  <div class="cabinet-staff__form-grid">
+                    <label class="cabinet__field">
+                      <span>Имя</span>
+                      <input type="text" name="full_name" id="staffFullName" required minlength="2" placeholder="Анна Петрова">
+                    </label>
+                    <label class="cabinet__field">
+                      <span>Telegram @username</span>
+                      <input type="text" name="telegram_username" id="staffTelegramUsername" placeholder="@anna_admin">
+                    </label>
+                    <label class="cabinet__field">
+                      <span>Телефон</span>
+                      <input type="tel" name="phone" id="staffPhone" placeholder="+7 999 123-45-67">
+                    </label>
+                    <label class="cabinet__field">
+                      <span>Роль</span>
+                      <select name="role" id="staffRole">
+                        <option value="manager">Менеджер</option>
+                        <option value="admin">Администратор</option>
+                        <option value="receptionist">Ресепшен</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p class="cabinet__error" id="staffCreateError" hidden></p>
+                  <button type="submit" class="btn btn--primary">Добавить сотрудника</button>
+                </form>
+
+                <div class="cabinet-staff__list" id="staffList">
+                  <p class="cabinet-app__empty-inline">Пока нет сотрудников. Добавьте первого — иначе бот примет любого с API-ключом.</p>
+                </div>
+              </article>
+
               <article class="cabinet-app__card">
                 <div class="cabinet-app__card-head">
                   <h3>Подключение бота</h3>
                   <span class="cabinet-app__badge" id="telegramStatus">Не подключено</span>
                 </div>
                 <ol class="cabinet-app__steps">
+                  <li>Добавьте сотрудника с его Telegram @username.</li>
                   <li>Откройте бота <strong>@ICSnotify00_bot</strong> в Telegram.</li>
-                  <li>Отправьте команду <code>/start</code> и ваш API-ключ.</li>
-                  <li>Администратор получит уведомления о новых записях.</li>
+                  <li>Сотрудник отправляет <code>/start</code> и API-ключ компании.</li>
+                  <li>Бот сверит @username и подключит чат к уведомлениям.</li>
                 </ol>
                 <div class="cabinet-app__copy">
                   <code id="telegramApiKey">—</code>
                   <button type="button" class="cabinet-app__copy-btn" data-copy-target="telegramApiKey">Копировать ключ</button>
                 </div>
               </article>
+
               <article class="cabinet-app__card">
                 <h3>Подключённые чаты</h3>
                 <div id="telegramManagersList">
-                  <p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-админов.</p>
+                  <p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-чатов.</p>
                 </div>
               </article>
             </div>

@@ -1464,6 +1464,83 @@ body.cabinet-open .footer {
   font-size: 12px;
   color: var(--text);
 }
+.cabinet-app__card--wide {
+  grid-column: 1 / -1;
+}
+.cabinet-staff__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.cabinet-staff__form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.cabinet-staff__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cabinet-staff__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(var(--surface-rgb), 0.45);
+}
+.cabinet-staff__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cabinet-staff__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cabinet-staff__meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.cabinet-staff__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.cabinet-staff__status.is-connected {
+  color: #7ee787;
+  border-color: rgba(126, 231, 135, 0.25);
+  background: rgba(126, 231, 135, 0.08);
+}
+.cabinet-staff__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cabinet-staff__actions button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+@media (max-width: 700px) {
+  .cabinet-staff__form-grid {
+    grid-template-columns: 1fr;
+  }
+  .cabinet-staff__item {
+    grid-template-columns: 1fr;
+  }
+}
 .cabinet__cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ============ Cabinet app (sidebar dashboard) ============ */
