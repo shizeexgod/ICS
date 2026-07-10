@@ -25,7 +25,7 @@
 <div class="bg-glow bg-glow--2" aria-hidden="true"></div>
 
 <header class="header">
-  <div class="container header__inner">
+  <div class="header__inner">
     <a href="#top" class="brand">
       <span class="brand__mark">
         <img src="assets/logo-source.png" alt="ICS">
@@ -36,17 +36,20 @@
       </span>
     </a>
 
-    <nav class="nav" id="nav">
+    <nav class="nav" id="nav" aria-label="Основная навигация">
       <a href="#about"><span>О нас</span></a>
       <a href="#services"><span>Услуги</span></a>
-      <a href="#channels"><span>Мессенджеры</span></a>
-      <a href="#process"><span>Как это работает</span></a>
+      <a href="#channels" class="nav__link--optional"><span>Мессенджеры</span></a>
+      <a href="#process" class="nav__link--optional"><span>Как это работает</span></a>
       <a href="#pricing"><span>Тарифы</span></a>
       <a href="#contacts"><span>Контакты</span></a>
-      <button type="button" class="nav__cabinet" id="openCabinet"><span>Личный кабинет</span></button>
     </nav>
 
     <div class="header__actions">
+      <button type="button" class="nav__cabinet" id="openCabinet" aria-label="Личный кабинет">
+        <span class="nav__cabinet-text nav__cabinet-text--full">Личный кабинет</span>
+        <span class="nav__cabinet-text nav__cabinet-text--short">Кабинет</span>
+      </button>
       <div class="theme-switch" id="themeSwitch" role="group" aria-label="Тема оформления">
         <button class="theme-switch__btn" data-theme-choice="blue" aria-label="Синяя тема" title="Синяя тема">
           <span class="theme-swatch theme-swatch--blue"></span>

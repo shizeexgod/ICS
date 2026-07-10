@@ -104,7 +104,7 @@ const Settings = (() => {
   });
 
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 980 && nav.classList.contains("open")) setNavOpen(false);
+    if (window.innerWidth >= 1100 && nav.classList.contains("open")) setNavOpen(false);
   });
 })();
 
