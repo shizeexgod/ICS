@@ -1173,7 +1173,13 @@ body.nav-open {
   }
   .nav__cabinet-text--full { display: none; }
   .nav__cabinet-text--short { display: inline; }
-  .container { padding: 0 16px; }
+  /* padding-left/right only — a shorthand `padding` here would zero out
+     .section's vertical padding on elements combining both classes,
+     collapsing the gap between sections (eyebrow labels overlapping
+     the previous section's text). */
+  .container { padding-left: 16px; padding-right: 16px; }
+  .section { padding: 56px 20px; }
+  .section, #contacts { scroll-margin-top: 90px; }
 }
 
 @media (max-width: 480px) {
@@ -2958,13 +2964,19 @@ body.cabinet-open .footer {
     overflow: hidden;
   }
   .cabinet__panel--wide {
-    max-height: 96dvh;
-    border-radius: 18px 18px 0 0;
+    /* Личный кабинет (dashboard) занимает весь экран на мобильных —
+       не урезанный лист снизу, а полноценное приложение на весь вьюпорт. */
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
   .cabinet__panel--wide .cabinet-app {
     border-radius: inherit;
   }
   .cabinet__close { top: 12px; right: 12px; }
+  .cabinet__panel--wide .cabinet__close {
+    top: max(12px, env(safe-area-inset-top));
+  }
   .cabinet__booking {
     flex-direction: column;
     align-items: stretch;
@@ -2992,7 +3004,7 @@ body.cabinet-open .footer {
     min-height: 0;
     height: auto;
     flex: 1;
-    max-height: 96dvh;
+    max-height: 100dvh;
   }
   .cabinet-app__sidebar {
     border-right: none;
@@ -3000,6 +3012,11 @@ body.cabinet-open .footer {
     padding: 10px 10px 8px;
     gap: 8px;
     flex-shrink: 0;
+    /* Without min-width:0 this flex item's automatic minimum size is its
+       content's min-content — the horizontally-scrolling nav row below
+       refuses to shrink and inflates the whole dashboard body width,
+       pushing cards (e.g. the Pro plan card) off the right edge. */
+    min-width: 0;
   }
   .cabinet-app__brand { padding: 0 4px 2px; }
   .cabinet-app__brand-text strong { max-width: none; }
@@ -3012,6 +3029,7 @@ body.cabinet-open .footer {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     flex: 0 0 auto;
+    min-width: 0;
   }
   .cabinet-app__nav::-webkit-scrollbar { display: none; }
   .cabinet-app__nav-btn {

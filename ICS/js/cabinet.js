@@ -622,6 +622,20 @@
     cabinet.setAttribute("aria-hidden", "true");
   }
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function apiFetch(path, options = {}) {
     const base = apiBase();
     if (!base) {
@@ -635,13 +649,20 @@
       headers.Authorization = `Bearer ${token}`;
     }
 
+    const url = `${base}${path}`;
     let res;
     try {
-      res = await fetch(`${base}${path}`, { ...options, headers });
+      res = await fetchWithTimeout(url, { ...options, headers }, 20000);
     } catch {
-      throw new Error(
-        "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
-      );
+      // Первая попытка могла упасть из-за "холодного старта" бэкенда — пробуем ещё раз.
+      try {
+        await sleep(1200);
+        res = await fetchWithTimeout(url, { ...options, headers }, 20000);
+      } catch {
+        throw new Error(
+          "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
+        );
+      }
     }
 
     const data = await res.json().catch(() => ({}));
@@ -692,11 +713,23 @@
     }
   });
 
+  const verifyCodeInput = verifyForm.querySelector('input[name="code"]');
+  if (verifyCodeInput) {
+    verifyCodeInput.addEventListener("input", () => {
+      const value = verifyCodeInput.value.trim();
+      if (/^\d{4}$/.test(value) && !verifyForm.dataset.submitting) {
+        verifyForm.requestSubmit();
+      }
+    });
+  }
+
   verifyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     showError(verifyError, "");
     const code = new FormData(verifyForm).get("code").toString().trim();
+    if (!/^\d{4}$/.test(code)) return;
     const btn = verifyForm.querySelector("button[type=submit]");
+    verifyForm.dataset.submitting = "1";
     setButtonLoading(btn, true, "Проверка…");
 
     try {
@@ -727,6 +760,7 @@
       showError(verifyError, formatApiError(err.message));
     } finally {
       setButtonLoading(btn, false);
+      delete verifyForm.dataset.submitting;
     }
   });
 

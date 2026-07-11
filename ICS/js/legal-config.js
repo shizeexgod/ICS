@@ -9,8 +9,8 @@ window.ICS_LEGAL = {
   email: "ICSnotify@yandex.ru",
   phone: "+79643704871",
   phoneDisplay: "+7 964 370-48-71",
-  telegramUrl: "https://t.me/icsoffic1al",
-  telegramHandle: "@icsoffic1al",
+  telegramUrl: "https://t.me/icsnotify",
+  telegramHandle: "@icsnotify",
   serviceName: "ICS",
   serviceDescription:
     "Сервис автоматических напоминаний о записи для бизнеса (Telegram, WhatsApp, MAX).",
