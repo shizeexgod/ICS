@@ -324,36 +324,63 @@
       <h2>Выберите подписку</h2>
     </div>
 
-    <div class="plans-panel plans-panel--landing">
+    <div class="plans-panel plans-panel--landing" data-plans-panel>
+      <div class="plans-toggle-row">
+        <div class="plans-toggle" data-billing-toggle data-period="monthly">
+          <span class="plans-toggle__thumb"></span>
+          <button type="button" class="is-active" data-period-btn="monthly">Помесячно</button>
+          <button type="button" data-period-btn="annual">Год <em>−22%</em></button>
+        </div>
+      </div>
       <div class="plans-panel__frame">
         <article class="plan-card" data-plan="trial">
           <div class="plan-card__head">
             <h3>Trial</h3>
             <span class="plan-card__badge">Для старта</span>
           </div>
-          <p class="plan-card__price">Бесплатно · 7 дней</p>
+          <p class="plan-card__price">Бесплатно · 10 дней</p>
           <ul class="plan-card__features">
             <li>— до 100 напоминаний</li>
+            <li>— Telegram, WhatsApp, MAX</li>
             <li>— личный кабинет и календарь</li>
-            <li>— Telegram-уведомления админам</li>
             <li>— шаблоны сообщений</li>
-            <li>— webhook для CRM</li>
+            <li>— до 2 сотрудников в Telegram-уведомлениях</li>
           </ul>
         </article>
 
         <article class="plan-card plan-card--pro" data-plan="pro">
           <div class="plan-card__head">
             <h3>Pro</h3>
-            <span class="plan-card__badge plan-card__badge--pro">Полный доступ</span>
+            <span class="plan-card__badge plan-card__badge--pro">Популярный</span>
           </div>
-          <p class="plan-card__price"><strong>5 000 ₽</strong> / месяц</p>
+          <p class="plan-card__price">
+            <span data-price-period="monthly"><strong>1 490 ₽</strong> / 30 дней</span>
+            <span data-price-period="annual" hidden><strong>13 900 ₽</strong> / год</span>
+          </p>
           <ul class="plan-card__features">
             <li>— безлимитные напоминания</li>
             <li>— все функции Trial</li>
-            <li>— приоритетная поддержка</li>
-            <li>— оплата через ЮKassa</li>
+            <li>— webhook и API-ключ для CRM</li>
+            <li>— до 5 сотрудников в Telegram-уведомлениях</li>
           </ul>
-          <button type="button" class="btn btn--primary plan-card__cta" id="landingProBtn">Перейти в кабинет</button>
+          <button type="button" class="btn btn--primary plan-card__cta" id="landingProBtn" data-plan-cta="pro">Перейти в кабинет</button>
+        </article>
+
+        <article class="plan-card plan-card--max" data-plan="max">
+          <div class="plan-card__head">
+            <h3>Max</h3>
+            <span class="plan-card__badge plan-card__badge--max">Для сети точек</span>
+          </div>
+          <p class="plan-card__price">
+            <span data-price-period="monthly"><strong>2 690 ₽</strong> / 30 дней</span>
+            <span data-price-period="annual" hidden><strong>22 900 ₽</strong> / год</span>
+          </p>
+          <ul class="plan-card__features">
+            <li>— всё из Pro</li>
+            <li>— неограниченное число сотрудников</li>
+            <li>— приоритетная поддержка</li>
+          </ul>
+          <button type="button" class="btn btn--ghost plan-card__cta" id="landingMaxBtn" data-plan-cta="max">Перейти в кабинет</button>
         </article>
       </div>
     </div>
@@ -428,10 +455,43 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
 
-    <!-- Шаг 1: регистрация / вход -->
-    <div class="cabinet__step" id="cabinetStepRegister">
+    <!-- Шаг 0: выбор входа / регистрации -->
+    <div class="cabinet__step" id="cabinetStepChoice">
       <span class="cabinet__eyebrow">Личный кабинет</span>
-      <h2 class="cabinet__title" id="cabinetTitle">Вход по email</h2>
+      <h2 class="cabinet__title" id="cabinetTitle">Добро пожаловать</h2>
+      <p class="cabinet__desc">Уже подключили ICS или регистрируете новое предприятие?</p>
+      <div class="cabinet__choice">
+        <button type="button" class="btn btn--primary cabinet__submit" id="choiceLoginBtn">
+          Войти
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="btn btn--ghost cabinet__submit" id="choiceRegisterBtn">Зарегистрировать предприятие</button>
+      </div>
+    </div>
+
+    <!-- Шаг 1а: вход (уже есть аккаунт) -->
+    <div class="cabinet__step" id="cabinetStepLogin" hidden>
+      <span class="cabinet__eyebrow">Вход</span>
+      <h2 class="cabinet__title">Вход по email</h2>
+      <p class="cabinet__desc">Укажите email — мы отправим одноразовый код для входа.</p>
+      <form class="cabinet__form" id="loginForm">
+        <label class="cabinet__field">
+          <span>Email</span>
+          <input type="email" name="email" autocomplete="email" placeholder="anna@example.com" required>
+        </label>
+        <p class="cabinet__error" id="loginError" hidden></p>
+        <button type="submit" class="btn btn--primary cabinet__submit">
+          Получить код
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="btn btn--ghost cabinet__back" id="backToChoiceFromLogin">Назад</button>
+      </form>
+    </div>
+
+    <!-- Шаг 1б: регистрация нового предприятия -->
+    <div class="cabinet__step" id="cabinetStepRegister" hidden>
+      <span class="cabinet__eyebrow">Регистрация</span>
+      <h2 class="cabinet__title">Новое предприятие</h2>
       <p class="cabinet__desc">Укажите имя и email — мы отправим одноразовый код для входа.</p>
       <form class="cabinet__form" id="registerForm">
         <label class="cabinet__field">
@@ -451,6 +511,7 @@
           Получить код
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+        <button type="button" class="btn btn--ghost cabinet__back" id="backToChoiceFromRegister">Назад</button>
       </form>
     </div>
 
@@ -557,14 +618,21 @@
           <section class="cabinet-app__view is-active" data-view-panel="overview">
             <p class="cabinet-app__lead">Здравствуйте, <strong id="dashboardUserName">—</strong>. Здесь сводка по напоминаниям и подключению сервиса.</p>
 
-            <div class="plans-panel plans-panel--cabinet" id="cabinetPlans">
+            <div class="plans-panel plans-panel--cabinet" id="cabinetPlans" data-plans-panel>
+              <div class="plans-toggle-row">
+                <div class="plans-toggle" data-billing-toggle data-period="monthly">
+                  <span class="plans-toggle__thumb"></span>
+                  <button type="button" class="is-active" data-period-btn="monthly">Помесячно</button>
+                  <button type="button" data-period-btn="annual">Год <em>−22%</em></button>
+                </div>
+              </div>
               <div class="plans-panel__frame">
                 <article class="plan-card" data-plan="trial">
                   <div class="plan-card__head">
                     <span class="plan-card__name plan-card__name--trial">Trial</span>
                     <span class="plan-card__status" hidden>Активна</span>
                   </div>
-                  <p class="plan-card__price">Бесплатно · 7 дней</p>
+                  <p class="plan-card__price">Бесплатно · 10 дней</p>
                   <p class="plan-card__note" id="trialPlanNote"></p>
                   <ul class="plan-card__features">
                     <li>— до 100 напоминаний</li>
@@ -579,13 +647,35 @@
                     <span class="plan-card__name plan-card__name--pro">Pro</span>
                     <span class="plan-card__status" hidden>Неактивна</span>
                   </div>
-                  <p class="plan-card__price"><strong id="proPriceLabel">5 000 ₽</strong> / месяц</p>
+                  <p class="plan-card__price">
+                    <span data-price-period="monthly"><strong data-price-plan="pro">1 490 ₽</strong> / 30 дней</span>
+                    <span data-price-period="annual" hidden><strong data-price-plan="pro">13 900 ₽</strong> / год</span>
+                  </p>
+                  <p class="plan-card__note" data-plan-expiry="pro" hidden></p>
                   <ul class="plan-card__features">
                     <li>— безлимитные напоминания</li>
                     <li>— все функции Trial</li>
+                    <li>— до 5 сотрудников</li>
+                  </ul>
+                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeProBtnOverview" data-plan-cta="pro" hidden>Оплатить Pro</button>
+                </article>
+
+                <article class="plan-card plan-card--max" data-plan="max">
+                  <div class="plan-card__head">
+                    <span class="plan-card__name plan-card__name--max">Max</span>
+                    <span class="plan-card__status" hidden>Неактивна</span>
+                  </div>
+                  <p class="plan-card__price">
+                    <span data-price-period="monthly"><strong data-price-plan="max">2 690 ₽</strong> / 30 дней</span>
+                    <span data-price-period="annual" hidden><strong data-price-plan="max">22 900 ₽</strong> / год</span>
+                  </p>
+                  <p class="plan-card__note" data-plan-expiry="max" hidden></p>
+                  <ul class="plan-card__features">
+                    <li>— всё из Pro</li>
+                    <li>— неограниченное число сотрудников</li>
                     <li>— приоритетная поддержка</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeProBtnOverview" hidden>Оплатить Pro</button>
+                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeMaxBtnOverview" data-plan-cta="max" hidden>Оплатить Max</button>
                 </article>
               </div>
             </div>
@@ -696,14 +786,21 @@
           <!-- Настройки -->
           <section class="cabinet-app__view" data-view-panel="settings" hidden>
             <p class="cabinet-app__lead">Параметры предприятия и управление подпиской.</p>
-            <div class="plans-panel plans-panel--cabinet plans-panel--compact" id="settingsPlans">
+            <div class="plans-panel plans-panel--cabinet plans-panel--compact" id="settingsPlans" data-plans-panel>
+              <div class="plans-toggle-row">
+                <div class="plans-toggle" data-billing-toggle data-period="monthly">
+                  <span class="plans-toggle__thumb"></span>
+                  <button type="button" class="is-active" data-period-btn="monthly">Помесячно</button>
+                  <button type="button" data-period-btn="annual">Год <em>−22%</em></button>
+                </div>
+              </div>
               <div class="plans-panel__frame">
                 <article class="plan-card" data-plan="trial">
                   <div class="plan-card__head">
                     <span class="plan-card__name plan-card__name--trial">Trial</span>
                     <span class="plan-card__status" hidden>Активна</span>
                   </div>
-                  <p class="plan-card__price">Бесплатно · 7 дней</p>
+                  <p class="plan-card__price">Бесплатно · 10 дней</p>
                   <ul class="plan-card__features">
                     <li>— до 100 напоминаний</li>
                     <li>— базовый функционал</li>
@@ -714,12 +811,32 @@
                     <span class="plan-card__name plan-card__name--pro">Pro</span>
                     <span class="plan-card__status" hidden>Неактивна</span>
                   </div>
-                  <p class="plan-card__price"><strong class="settings-pro-price">5 000 ₽</strong> / месяц</p>
+                  <p class="plan-card__price">
+                    <span data-price-period="monthly"><strong data-price-plan="pro">1 490 ₽</strong> / 30 дней</span>
+                    <span data-price-period="annual" hidden><strong data-price-plan="pro">13 900 ₽</strong> / год</span>
+                  </p>
+                  <p class="plan-card__note" data-plan-expiry="pro" hidden></p>
                   <ul class="plan-card__features">
                     <li>— безлимитные напоминания</li>
-                    <li>— полный доступ</li>
+                    <li>— до 5 сотрудников</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" hidden>Оплатить Pro</button>
+                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="pro" hidden>Оплатить Pro</button>
+                </article>
+                <article class="plan-card plan-card--max" data-plan="max">
+                  <div class="plan-card__head">
+                    <span class="plan-card__name plan-card__name--max">Max</span>
+                    <span class="plan-card__status" hidden>Неактивна</span>
+                  </div>
+                  <p class="plan-card__price">
+                    <span data-price-period="monthly"><strong data-price-plan="max">2 690 ₽</strong> / 30 дней</span>
+                    <span data-price-period="annual" hidden><strong data-price-plan="max">22 900 ₽</strong> / год</span>
+                  </p>
+                  <p class="plan-card__note" data-plan-expiry="max" hidden></p>
+                  <ul class="plan-card__features">
+                    <li>— всё из Pro</li>
+                    <li>— неограниченные сотрудники</li>
+                  </ul>
+                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="max" hidden>Оплатить Max</button>
                 </article>
               </div>
             </div>

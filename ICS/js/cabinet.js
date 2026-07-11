@@ -24,10 +24,18 @@
   const backdrop = document.getElementById("cabinetBackdrop");
   const openBtn = document.getElementById("openCabinet");
   const closeBtn = document.getElementById("closeCabinet");
+  const stepChoice = document.getElementById("cabinetStepChoice");
+  const stepLogin = document.getElementById("cabinetStepLogin");
   const stepRegister = document.getElementById("cabinetStepRegister");
   const stepVerify = document.getElementById("cabinetStepVerify");
   const stepOnboarding = document.getElementById("cabinetStepOnboarding");
   const stepApp = document.getElementById("cabinetStepApp");
+  const choiceLoginBtn = document.getElementById("choiceLoginBtn");
+  const choiceRegisterBtn = document.getElementById("choiceRegisterBtn");
+  const backToChoiceFromLogin = document.getElementById("backToChoiceFromLogin");
+  const backToChoiceFromRegister = document.getElementById("backToChoiceFromRegister");
+  const loginForm = document.getElementById("loginForm");
+  const loginError = document.getElementById("loginError");
   const registerForm = document.getElementById("registerForm");
   const verifyForm = document.getElementById("verifyForm");
   const onboardingForm = document.getElementById("onboardingForm");
@@ -69,7 +77,6 @@
   const statRemindersWeek = document.getElementById("statRemindersWeek");
   const sidebarPlanBadge = document.getElementById("sidebarPlanBadge");
   const trialPlanNote = document.getElementById("trialPlanNote");
-  const proPriceLabel = document.getElementById("proPriceLabel");
   const upgradeProBtnOverview = document.getElementById("upgradeProBtnOverview");
   const nav = document.getElementById("nav");
   const cabinetNav = document.getElementById("cabinetNav");
@@ -90,6 +97,7 @@
   let pendingEmail = "";
   let pendingName = "";
   let pendingPhone = "";
+  let pendingAuthStep = null; // stepLogin or stepRegister — куда вернуться из шага OTP
   let activeView = "overview";
   let calendarMonth = new Date();
   let calendarSelectedDate = toDateKey(new Date());
@@ -203,31 +211,63 @@
     };
   }
 
+  const PLAN_LABEL = { trial: "Trial", pro: "Pro", max: "Max" };
+
+  function formatPlanDate(iso) {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  }
+
   function syncPlanUi(plan) {
     if (!plan) return;
 
-    const isPro = plan.plan === "pro" && plan.subscription_status === "active";
-    const activePlan = isPro ? "pro" : "trial";
+    const isPaidActive =
+      (plan.plan === "pro" || plan.plan === "max") && plan.subscription_status === "active";
+    const activePlan = isPaidActive ? plan.plan : "trial";
     const days = plan.trial_days_left ?? 0;
     const remaining = plan.reminders_remaining ?? 0;
-    const price = plan.pro_price_rub ?? 5000;
-    const showUpgrade = !isPro && (!plan.is_trial_active || !plan.can_send_reminders);
 
     if (sidebarPlanBadge) {
-      sidebarPlanBadge.textContent = isPro ? "Pro" : "Trial";
-      sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
+      sidebarPlanBadge.textContent = PLAN_LABEL[activePlan];
+      sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", activePlan !== "trial");
     }
 
     document.querySelectorAll("#cabinetStepApp .plan-card, #settingsPlans .plan-card").forEach((card) => {
       const planType = card.dataset.plan;
       const isActive = planType === activePlan;
       card.classList.toggle("is-active", isActive);
+
       const status = card.querySelector(".plan-card__status");
       if (status) {
         status.textContent = isActive ? "Активна" : "Неактивна";
         status.classList.toggle("plan-card__status--active", isActive);
         status.classList.toggle("plan-card__status--inactive", !isActive);
         status.hidden = false;
+      }
+
+      const expiryEl = card.querySelector(`[data-plan-expiry="${planType}"]`);
+      if (expiryEl) {
+        if (isActive && plan.subscription_ends_at) {
+          expiryEl.textContent = `Активен до ${formatPlanDate(plan.subscription_ends_at)}`;
+          expiryEl.hidden = false;
+        } else {
+          expiryEl.hidden = true;
+        }
+      }
+
+      const cta = card.querySelector("[data-plan-cta]");
+      if (cta && (planType === "pro" || planType === "max")) {
+        cta.hidden = isActive;
+        cta.textContent = `Оплатить ${PLAN_LABEL[planType]}`;
+        cta.onclick = (ev) => startPlanPayment(planType, ev);
       }
     });
 
@@ -238,7 +278,7 @@
     });
 
     if (trialPlanNote) {
-      if (isPro) {
+      if (activePlan !== "trial") {
         trialPlanNote.textContent = "";
         trialPlanNote.hidden = true;
       } else if (!plan.is_trial_active) {
@@ -252,31 +292,18 @@
         trialPlanNote.hidden = false;
       }
     }
-
-    const priceText = `${price.toLocaleString("ru-RU")} ₽`;
-    if (proPriceLabel) proPriceLabel.textContent = priceText;
-    document.querySelectorAll(".settings-pro-price").forEach((el) => {
-      el.textContent = priceText;
-    });
-
-    document.querySelectorAll(".settings-upgrade-btn, #upgradeProBtnOverview").forEach((btn) => {
-      btn.hidden = !showUpgrade;
-      btn.textContent = "Оплатить Pro";
-      btn.onclick = startProPayment;
-    });
   }
 
-  async function startProPayment(ev) {
-    const btn =
-      ev?.currentTarget ||
-      document.getElementById("upgradeProBtnOverview") ||
-      document.querySelector(".settings-upgrade-btn");
+  async function startPlanPayment(plan, ev) {
+    const btn = ev?.currentTarget || document.querySelector(`[data-plan-cta="${plan}"]:not([hidden])`);
+    const panel = btn?.closest("[data-plans-panel]");
+    const billingPeriod = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
     setButtonLoading(btn, true, "Переход к оплате…");
     const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
     try {
       const data = await apiFetch("/api/v1/billing/create-payment", {
         method: "POST",
-        body: JSON.stringify({ return_url: returnUrl }),
+        body: JSON.stringify({ return_url: returnUrl, plan, billing_period: billingPeriod }),
       });
       window.location.href = data.confirmation_url;
     } catch (err) {
@@ -310,6 +337,8 @@
 
   async function loadDashboardStats() {
     if (!statAppointmentsToday) return;
+    const statEls = [statAppointmentsToday, statActiveClients, statRemindersWeek];
+    statEls.forEach((el) => el.classList.add("is-loading"));
     try {
       const stats = await apiFetch("/api/v1/company/stats");
       statAppointmentsToday.textContent = String(stats.appointments_today ?? 0);
@@ -319,6 +348,8 @@
       statAppointmentsToday.textContent = "0";
       statActiveClients.textContent = "0";
       statRemindersWeek.textContent = "0";
+    } finally {
+      statEls.forEach((el) => el.classList.remove("is-loading"));
     }
   }
 
@@ -514,7 +545,7 @@
   }
 
   function showStep(step) {
-    const steps = [stepRegister, stepVerify, stepOnboarding, stepApp];
+    const steps = [stepChoice, stepLogin, stepRegister, stepVerify, stepOnboarding, stepApp];
     steps.forEach((s) => {
       s.hidden = s !== step;
     });
@@ -589,7 +620,16 @@
     loadTelegramStatus();
   }
 
+  function warmUpBackend() {
+    const base = apiBase();
+    if (!base) return;
+    // Не ждём ответа и игнорируем ошибку — просто заранее «будим» бэкенд,
+    // пока пользователь читает форму, чтобы первый реальный запрос не упал.
+    fetch(`${base}/docs`, { method: "GET" }).catch(() => {});
+  }
+
   async function openCabinet() {
+    warmUpBackend();
     document.body.classList.add("cabinet-open");
     cabinet.classList.add("is-open");
     cabinet.setAttribute("aria-hidden", "false");
@@ -597,9 +637,11 @@
 
     const token = getToken();
     if (!token) {
-      showStep(stepRegister);
+      showStep(stepChoice);
       registerForm.reset();
+      loginForm.reset();
       showError(registerError, "");
+      showError(loginError, "");
       return;
     }
 
@@ -651,18 +693,24 @@
 
     const url = `${base}${path}`;
     let res;
-    try {
-      res = await fetchWithTimeout(url, { ...options, headers }, 20000);
-    } catch {
-      // Первая попытка могла упасть из-за "холодного старта" бэкенда — пробуем ещё раз.
+    let lastErr;
+    // До 3 попыток — бэкенд на Amvera иногда «просыпается» после простоя,
+    // и первый/второй запрос может упасть по сети раньше, чем контейнер поднимется.
+    const delays = [0, 1200, 2500];
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      if (delays[attempt]) await sleep(delays[attempt]);
       try {
-        await sleep(1200);
         res = await fetchWithTimeout(url, { ...options, headers }, 20000);
-      } catch {
-        throw new Error(
-          "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
-        );
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
       }
+    }
+    if (lastErr) {
+      throw new Error(
+        "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
+      );
     }
 
     const data = await res.json().catch(() => ({}));
@@ -705,9 +753,60 @@
       }
       verifyForm.reset();
       showError(verifyError, "");
+      pendingAuthStep = stepRegister;
       showStep(stepVerify);
     } catch (err) {
       showError(registerError, formatApiError(err.message));
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  });
+
+  choiceLoginBtn.addEventListener("click", () => {
+    showError(loginError, "");
+    loginForm.reset();
+    showStep(stepLogin);
+  });
+
+  choiceRegisterBtn.addEventListener("click", () => {
+    showError(registerError, "");
+    registerForm.reset();
+    showStep(stepRegister);
+  });
+
+  backToChoiceFromLogin.addEventListener("click", () => showStep(stepChoice));
+  backToChoiceFromRegister.addEventListener("click", () => showStep(stepChoice));
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    showError(loginError, "");
+    const fd = new FormData(loginForm);
+    pendingName = "";
+    pendingEmail = (fd.get("email") || "").toString().trim().toLowerCase();
+    pendingPhone = "";
+    const btn = loginForm.querySelector("button[type=submit]");
+    setButtonLoading(btn, true, "Отправка…");
+
+    try {
+      const data = await apiFetch("/api/v1/auth/send-code", {
+        method: "POST",
+        body: JSON.stringify({ email: pendingEmail }),
+      });
+
+      verifyEmailDisplay.textContent = pendingEmail;
+      if (data.dev_code && verifyDevHint) {
+        verifyDevHint.textContent = `Режим разработки: код ${data.dev_code} (SMTP не настроен)`;
+        verifyDevHint.hidden = false;
+      } else if (verifyDevHint) {
+        verifyDevHint.hidden = true;
+        verifyDevHint.textContent = "";
+      }
+      verifyForm.reset();
+      showError(verifyError, "");
+      pendingAuthStep = stepLogin;
+      showStep(stepVerify);
+    } catch (err) {
+      showError(loginError, formatApiError(err.message));
     } finally {
       setButtonLoading(btn, false);
     }
@@ -846,7 +945,7 @@
   });
 
   backToRegister.addEventListener("click", () => {
-    showStep(stepRegister);
+    showStep(pendingAuthStep || stepChoice);
     showError(verifyError, "");
     if (verifyDevHint) {
       verifyDevHint.hidden = true;
@@ -861,8 +960,9 @@
     calendarLoaded = false;
     calendarAppointments = [];
     templatesLoaded = false;
-    showStep(stepRegister);
+    showStep(stepChoice);
     registerForm.reset();
+    loginForm.reset();
     setPanelWide(false);
   }
 
@@ -1354,6 +1454,8 @@
         }),
       });
       if (savedEl) {
+        savedEl.classList.remove("is-error");
+        savedEl.textContent = "Сохранено";
         savedEl.hidden = false;
         setTimeout(() => {
           savedEl.hidden = true;
@@ -1363,7 +1465,13 @@
         .querySelector('#setupChecklist li[data-check="templates"]')
         ?.classList.add("is-done");
     } catch (err) {
-      alert(err.message);
+      if (savedEl) {
+        savedEl.classList.add("is-error");
+        savedEl.textContent = `${formatApiError(err.message)} Попробуйте ещё раз.`;
+        savedEl.hidden = false;
+      } else {
+        alert(err.message);
+      }
     } finally {
       btn.disabled = false;
     }
@@ -1462,10 +1570,27 @@
 
   handleBillingReturn();
 
-  const landingProBtn = document.getElementById("landingProBtn");
-  if (landingProBtn) {
-    landingProBtn.addEventListener("click", () => {
+  ["landingProBtn", "landingMaxBtn"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("click", () => {
       document.getElementById("openCabinet")?.click();
+    });
+  });
+
+  function initBillingToggles() {
+    document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
+      if (toggle.dataset.toggleBound) return;
+      toggle.dataset.toggleBound = "1";
+      toggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-period-btn]");
+        if (!btn) return;
+        const period = btn.dataset.periodBtn;
+        toggle.dataset.period = period;
+        toggle.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
+        const panel = toggle.closest("[data-plans-panel]");
+        panel?.querySelectorAll("[data-price-period]").forEach((el) => {
+          el.hidden = el.dataset.pricePeriod !== period;
+        });
+      });
     });
   }
 
@@ -1482,9 +1607,14 @@
       const cards = [...frame.querySelectorAll(".plan-card")];
       if (!cards.length) return;
 
+      function planTone(card) {
+        const plan = card?.dataset.plan;
+        return plan === "pro" || plan === "max" ? plan : "trial";
+      }
+
       function positionHighlight(card, tone = "trial") {
         if (!card) {
-          frame.classList.remove("is-highlight-ready", "is-highlight-pro");
+          frame.classList.remove("is-highlight-ready", "is-highlight-pro", "is-highlight-max");
           return;
         }
         const y = card.offsetTop;
@@ -1492,6 +1622,7 @@
         highlight.style.transform = `translateY(${y}px)`;
         highlight.style.height = `${h}px`;
         frame.classList.toggle("is-highlight-pro", tone === "pro");
+        frame.classList.toggle("is-highlight-max", tone === "max");
         frame.classList.add("is-highlight-ready");
       }
 
@@ -1501,15 +1632,13 @@
 
       function syncHighlight() {
         const card = activeCard();
-        const tone = card?.dataset.plan === "pro" ? "pro" : "trial";
-        positionHighlight(card, tone);
+        positionHighlight(card, planTone(card));
       }
 
       function previewCard(card) {
         cards.forEach((c) => c.classList.remove("is-preview"));
         card.classList.add("is-preview");
-        const tone = card.dataset.plan === "pro" ? "pro" : "trial";
-        positionHighlight(card, tone);
+        positionHighlight(card, planTone(card));
       }
 
       cards.forEach((card) => {
@@ -1536,4 +1665,5 @@
   }
 
   initPlansPanels();
+  initBillingToggles();
 })();
