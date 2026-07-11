@@ -75,13 +75,27 @@ const Settings = (() => {
   const burger = document.getElementById("burger");
   const nav = document.getElementById("nav");
   const header = document.querySelector(".header");
+  const headerInner = header?.querySelector(".header__inner");
   if (!burger || !nav) return;
 
+  const MOBILE_NAV_BP = 1100;
+
+  function updateNavOrigin() {
+    if (window.innerWidth >= MOBILE_NAV_BP || !headerInner) return;
+    const burgerRect = burger.getBoundingClientRect();
+    const innerRect = headerInner.getBoundingClientRect();
+    const originX = burgerRect.left + burgerRect.width / 2 - innerRect.left;
+    const originY = burgerRect.bottom - innerRect.top + 8;
+    nav.style.transformOrigin = `${originX}px ${originY}px`;
+  }
+
   function setNavOpen(open) {
+    if (open) updateNavOrigin();
     nav.classList.toggle("open", open);
     header?.classList.toggle("is-nav-open", open);
     burger.setAttribute("aria-expanded", open ? "true" : "false");
     burger.setAttribute("aria-controls", "nav");
+    document.body.classList.toggle("nav-open", open);
   }
 
   burger.addEventListener("click", (e) => {
@@ -104,7 +118,8 @@ const Settings = (() => {
   });
 
   window.addEventListener("resize", () => {
-    if (window.innerWidth >= 1100 && nav.classList.contains("open")) setNavOpen(false);
+    if (nav.classList.contains("open")) updateNavOrigin();
+    if (window.innerWidth >= MOBILE_NAV_BP && nav.classList.contains("open")) setNavOpen(false);
   });
 })();
 

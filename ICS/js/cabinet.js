@@ -16,6 +16,9 @@
     templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
   };
 
+  const STAFF_BACKEND_HINT =
+    "Раздел сотрудников недоступен на сервере. Выполните миграцию 010_company_staff.sql в Supabase, затем задеплойте бэкенд: git push amvera main:master";
+
   const cabinet = document.getElementById("cabinet");
   const cabinetPanel = document.getElementById("cabinetPanel");
   const backdrop = document.getElementById("cabinetBackdrop");
@@ -181,8 +184,7 @@
         "У вас уже активна подписка Pro.",
       "Failed to create payment. Please try again later.":
         "Не удалось создать платёж. Попробуйте позже.",
-      "Not Found":
-        "Раздел недоступен на сервере. Задеплойте бэкенд: git push amvera main:master",
+      "Not Found": STAFF_BACKEND_HINT,
     };
     return map[message] || message;
   }
@@ -216,7 +218,7 @@
       sidebarPlanBadge.classList.toggle("cabinet-app__plan-badge--pro", isPro);
     }
 
-    document.querySelectorAll("#cabinetStepApp .plan-card").forEach((card) => {
+    document.querySelectorAll("#cabinetStepApp .plan-card, #settingsPlans .plan-card").forEach((card) => {
       const planType = card.dataset.plan;
       const isActive = planType === activePlan;
       card.classList.toggle("is-active", isActive);
@@ -226,6 +228,12 @@
         status.classList.toggle("plan-card__status--active", isActive);
         status.classList.toggle("plan-card__status--inactive", !isActive);
         status.hidden = false;
+      }
+    });
+
+    document.querySelectorAll(".plans-panel__frame").forEach((frame) => {
+      if (typeof frame._syncPlanHighlight === "function") {
+        frame._syncPlanHighlight();
       }
     });
 
@@ -428,7 +436,7 @@
       if (staffCountBadge) staffCountBadge.textContent = "0";
       staffList.innerHTML = `
         <div class="cabinet-staff__empty">
-          <p>Не удалось загрузить список сотрудников. Задеплойте бэкенд: <code>git push amvera main:master</code></p>
+          <p>${STAFF_BACKEND_HINT}</p>
         </div>
       `;
     }
@@ -1009,19 +1017,49 @@
     renderCalendarGrid();
   }
 
+  let bookingsLoadSeq = 0;
+  const ACTIVE_BOOKING_STATUSES = new Set(["pending", "confirmed"]);
+
+  function dedupeBookings(rows) {
+    const seen = new Set();
+    return rows.filter((row) => {
+      const id = String(row.id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+
+  function clearBookingsListContent() {
+    if (!bookingsList) return;
+    bookingsList.querySelectorAll(".cabinet__booking, .cabinet__empty, .cabinet__error").forEach((el) => {
+      el.remove();
+    });
+  }
+
   async function loadBookings() {
     if (!bookingsList || !bookingsLoading) return;
-    bookingsList.innerHTML = "";
+    const seq = ++bookingsLoadSeq;
+
+    clearBookingsListContent();
     bookingsLoading.hidden = false;
-    bookingsList.appendChild(bookingsLoading);
+    if (!bookingsList.contains(bookingsLoading)) {
+      bookingsList.appendChild(bookingsLoading);
+    }
 
     try {
-      const bookings = await apiFetch("/api/v1/company/appointments");
-      bookingsLoading.remove();
+      const rows = await apiFetch("/api/v1/company/appointments");
+      if (seq !== bookingsLoadSeq) return;
+
+      bookingsLoading.hidden = true;
+
+      const bookings = dedupeBookings(rows).filter((b) => ACTIVE_BOOKING_STATUSES.has(b.status));
 
       if (!bookings.length) {
-        bookingsList.innerHTML =
-          '<p class="cabinet__empty">Записей пока нет. Создайте через webhook или календарь.</p>';
+        const empty = document.createElement("p");
+        empty.className = "cabinet__empty";
+        empty.textContent = "Активных записей пока нет. Создайте через webhook или календарь.";
+        bookingsList.appendChild(empty);
         return;
       }
 
@@ -1054,8 +1092,13 @@
         btn.addEventListener("click", () => updateBookingStatus(btn.dataset.id, "confirmed", btn));
       });
     } catch (err) {
-      bookingsLoading.remove();
-      bookingsList.innerHTML = `<p class="cabinet__error">${err.message}</p>`;
+      if (seq !== bookingsLoadSeq) return;
+      bookingsLoading.hidden = true;
+      clearBookingsListContent();
+      const error = document.createElement("p");
+      error.className = "cabinet__error";
+      error.textContent = err.message;
+      bookingsList.appendChild(error);
     }
   }
 
@@ -1391,4 +1434,72 @@
       document.getElementById("openCabinet")?.click();
     });
   }
+
+  function initPlansPanels() {
+    document.querySelectorAll(".plans-panel__frame").forEach((frame) => {
+      if (frame.dataset.plansBound) return;
+      frame.dataset.plansBound = "1";
+
+      const highlight = document.createElement("div");
+      highlight.className = "plans-panel__highlight";
+      highlight.setAttribute("aria-hidden", "true");
+      frame.prepend(highlight);
+
+      const cards = [...frame.querySelectorAll(".plan-card")];
+      if (!cards.length) return;
+
+      function positionHighlight(card, tone = "trial") {
+        if (!card) {
+          frame.classList.remove("is-highlight-ready", "is-highlight-pro");
+          return;
+        }
+        const y = card.offsetTop;
+        const h = card.offsetHeight;
+        highlight.style.transform = `translateY(${y}px)`;
+        highlight.style.height = `${h}px`;
+        frame.classList.toggle("is-highlight-pro", tone === "pro");
+        frame.classList.add("is-highlight-ready");
+      }
+
+      function activeCard() {
+        return frame.querySelector(".plan-card.is-active") || cards[0];
+      }
+
+      function syncHighlight() {
+        const card = activeCard();
+        const tone = card?.dataset.plan === "pro" ? "pro" : "trial";
+        positionHighlight(card, tone);
+      }
+
+      function previewCard(card) {
+        cards.forEach((c) => c.classList.remove("is-preview"));
+        card.classList.add("is-preview");
+        const tone = card.dataset.plan === "pro" ? "pro" : "trial";
+        positionHighlight(card, tone);
+      }
+
+      cards.forEach((card) => {
+        card.addEventListener("mouseenter", () => previewCard(card));
+        card.addEventListener("focusin", () => previewCard(card));
+        card.addEventListener("mouseleave", () => {
+          card.classList.remove("is-preview");
+          syncHighlight();
+        });
+        card.addEventListener("focusout", () => {
+          card.classList.remove("is-preview");
+          syncHighlight();
+        });
+      });
+
+      frame._syncPlanHighlight = syncHighlight;
+
+      const resizeObserver = new ResizeObserver(() => syncHighlight());
+      resizeObserver.observe(frame);
+      cards.forEach((card) => resizeObserver.observe(card));
+
+      requestAnimationFrame(syncHighlight);
+    });
+  }
+
+  initPlansPanels();
 })();
