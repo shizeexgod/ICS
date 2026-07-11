@@ -220,15 +220,12 @@
       const planType = card.dataset.plan;
       const isActive = planType === activePlan;
       card.classList.toggle("is-active", isActive);
-      const badge = card.querySelector(".plan-card__badge");
-      if (badge) {
-        if (planType === "trial") {
-          badge.textContent = isActive ? "Активна" : "Trial";
-        } else {
-          badge.textContent = isActive ? "Активна" : "Pro";
-        }
-        badge.classList.toggle("plan-card__badge--active", isActive);
-        badge.hidden = false;
+      const status = card.querySelector(".plan-card__status");
+      if (status) {
+        status.textContent = isActive ? "Активна" : "Неактивна";
+        status.classList.toggle("plan-card__status--active", isActive);
+        status.classList.toggle("plan-card__status--inactive", !isActive);
+        status.hidden = false;
       }
     });
 
@@ -256,7 +253,7 @@
 
     document.querySelectorAll(".settings-upgrade-btn, #upgradeProBtnOverview").forEach((btn) => {
       btn.hidden = !showUpgrade;
-      btn.textContent = `Оплатить Pro — ${priceText}`;
+      btn.textContent = "Оплатить Pro";
       btn.onclick = startProPayment;
     });
   }

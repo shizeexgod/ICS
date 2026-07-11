@@ -1748,6 +1748,7 @@ body.cabinet-open .footer {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  min-height: 22px;
 }
 
 .cabinet-app__brand-title strong {
@@ -1757,11 +1758,15 @@ body.cabinet-open .footer {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
 .cabinet-app__brand-text .cabinet-app__plan-badge {
   margin-top: 0;
   flex-shrink: 0;
+  align-self: center;
 }
 
 .cabinet-app__nav {
@@ -1848,6 +1853,11 @@ body.cabinet-open .footer {
   width: 100%;
   justify-content: center;
   margin-top: 4px;
+}
+
+.cabinet-app__view .btn {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .cabinet-app__body {
@@ -2048,14 +2058,17 @@ body.cabinet-open .footer {
 }
 
 .cabinet-app__plan-badge {
-  display: inline-block;
-  margin-top: 2px;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 3px 8px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  line-height: 1;
   color: var(--accent);
   background: rgba(var(--accent-rgb), 0.12);
   border: 1px solid rgba(var(--accent-rgb), 0.25);
@@ -2337,43 +2350,56 @@ body.cabinet-open .footer {
 .plans-panel__frame {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 6px;
+  gap: 10px;
+  padding: 10px;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, var(--accent) 15%);
+  background:
+    linear-gradient(165deg, rgba(var(--accent-rgb), 0.06), transparent 42%),
+    var(--surface-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
 .plan-card {
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(var(--surface-rgb), 0.45);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
 .plans-panel__frame .plan-card + .plan-card {
-  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-top: none;
   margin-top: 0;
-  border-radius: 0;
-  padding-top: 14px;
+  border-radius: 16px;
+  padding-top: 16px;
 }
 
 .plan-card.is-active {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-  background: var(--surface);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
-  border-radius: 14px;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background:
+    linear-gradient(155deg, rgba(var(--accent-rgb), 0.1), transparent 55%),
+    var(--surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 12px 28px rgba(0, 0, 0, 0.14);
 }
 
 .plans-panel__frame .plan-card.is-active + .plan-card,
 .plans-panel__frame .plan-card + .plan-card.is-active {
-  border-top-color: transparent;
+  border-top-color: var(--border);
 }
 
 .plan-card--pro.is-active {
-  border-color: color-mix(in srgb, #7ee787 45%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, #7ee787 20%, transparent);
+  border-color: color-mix(in srgb, #7ee787 50%, var(--border));
+  background:
+    linear-gradient(155deg, rgba(126, 231, 135, 0.1), transparent 55%),
+    var(--surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #7ee787 22%, transparent),
+    0 12px 28px rgba(0, 0, 0, 0.14);
 }
 
 .plan-card__head {
@@ -2381,7 +2407,7 @@ body.cabinet-open .footer {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .plan-card__head h3 {
@@ -2389,6 +2415,54 @@ body.cabinet-open .footer {
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.plan-card__name {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.plan-card__name--trial {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+}
+
+.plan-card__name--pro {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.1);
+  border: 1px solid rgba(126, 231, 135, 0.28);
+}
+
+.plan-card__status {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+}
+
+.plan-card__status--active {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.1);
+  border: 1px solid rgba(126, 231, 135, 0.28);
+}
+
+.plan-card__status--inactive {
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .plan-card__badge {
@@ -2460,8 +2534,10 @@ body.cabinet-open .footer {
 
 .plan-card__cta {
   width: 100%;
+  max-width: 100%;
   margin-top: 14px;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .plans-panel--compact .plan-card {
@@ -2479,7 +2555,7 @@ body.cabinet-open .footer {
 /* ============ Cabinet calendar ============ */
 .cabinet-calendar {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
   gap: 16px;
   align-items: start;
 }
@@ -2489,6 +2565,7 @@ body.cabinet-open .footer {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .cabinet-calendar__main {
@@ -2604,6 +2681,27 @@ body.cabinet-open .footer {
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface-2);
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cabinet-calendar__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cabinet-calendar__form .cabinet__field {
+  min-width: 0;
+}
+
+.cabinet-calendar__form .btn {
+  width: 100%;
+  max-width: 100%;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-top: 2px;
 }
 
 .cabinet-calendar__day-title {
@@ -2654,8 +2752,19 @@ body.cabinet-open .footer {
 
 .cabinet-calendar__form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
+  min-width: 0;
+}
+
+.cabinet-calendar__form-row .cabinet__field {
+  min-width: 0;
+}
+
+.cabinet-calendar__form-row input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 560px) {
