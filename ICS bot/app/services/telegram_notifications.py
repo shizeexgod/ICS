@@ -16,16 +16,14 @@ from app.bot.callbacks import ConfirmBookingCallback
 from app.bot.main import bot
 from app.models.company_manager import CompanyManager
 from app.services.template_service import build_appointment_context, get_template_text
+from app.services.staff_service import get_notification_chat_ids
 
 logger = logging.getLogger(__name__)
 
 
 async def get_manager_chat_ids(session: AsyncSession, company_id: uuid.UUID) -> list[int]:
-    """Return all Telegram chat ids subscribed to a company's booking notifications."""
-    result = await session.execute(
-        select(CompanyManager.tg_chat_id).where(CompanyManager.company_id == company_id)
-    )
-    return list(result.scalars().all())
+    """Return Telegram chat ids subscribed to a company's booking notifications."""
+    return await get_notification_chat_ids(session, company_id)
 
 
 async def notify_company_managers_of_new_booking(

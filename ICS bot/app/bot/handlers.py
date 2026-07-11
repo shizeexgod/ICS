@@ -34,7 +34,9 @@ from app.models.appointment import Appointment, AppointmentStatus
 from app.models.client import Client
 from app.models.company import Company
 from app.models.company_manager import CompanyManager
+from app.models.company_staff import CompanyStaff
 from app.services.notifications import notify_client
+from app.services.staff_service import bind_staff_chat, is_staff_chat
 from app.services.template_service import build_appointment_context, get_template_text
 
 logger = logging.getLogger(__name__)
@@ -59,34 +61,39 @@ def _clean_phone(phone: str) -> str:
     return _DIGITS_ONLY_RE.sub("", phone or "")
 
 
-async def _bind_manager(*, api_key: str, tg_chat_id: int) -> Company | None:
-    """Validate `api_key` against `companies` and upsert a `company_managers` row.
+async def _bind_manager(
+    *,
+    api_key: str,
+    tg_chat_id: int,
+    telegram_username: str | None = None,
+) -> tuple[Company | None, str | None]:
+    """Validate api_key and bind the chat to company staff.
 
-    Returns the matched `Company` on success, or `None` if the key is unknown.
-    Idempotent: calling this again for the same (company, chat) pair is a no-op.
+    Returns (company, error_message). On success error_message is None.
     """
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(Company).where(Company.api_key == api_key))
         company = result.scalars().first()
         if company is None:
-            return None
+            return None, None
 
-        existing = await session.execute(
-            select(CompanyManager).where(
-                CompanyManager.company_id == company.id,
-                CompanyManager.tg_chat_id == tg_chat_id,
-            )
+        staff, error = await bind_staff_chat(
+            session,
+            company=company,
+            tg_chat_id=tg_chat_id,
+            telegram_username=telegram_username,
         )
-        if existing.scalars().first() is None:
-            session.add(CompanyManager(company_id=company.id, tg_chat_id=tg_chat_id))
-            await session.commit()
-            logger.info(
-                "Bound tg_chat_id=%s as manager of company_id=%s (%s)",
-                tg_chat_id,
-                company.id,
-                company.name,
-            )
-        return company
+        if error:
+            return None, error
+
+        logger.info(
+            "Bound tg_chat_id=%s as staff of company_id=%s (%s), staff_id=%s",
+            tg_chat_id,
+            company.id,
+            company.name,
+            staff.id if staff else None,
+        )
+        return company, None
 
 
 async def _send_client_greeting(message: Message) -> None:
@@ -111,9 +118,17 @@ async def handle_start(message: Message, command: CommandObject) -> None:
     """
     tg_chat_id = message.chat.id
     maybe_api_key = (command.args or "").strip()
+    tg_username = message.from_user.username if message.from_user else None
 
     if maybe_api_key:
-        company = await _bind_manager(api_key=maybe_api_key, tg_chat_id=tg_chat_id)
+        company, bind_error = await _bind_manager(
+            api_key=maybe_api_key,
+            tg_chat_id=tg_chat_id,
+            telegram_username=tg_username,
+        )
+        if bind_error:
+            await message.answer(f"❌ {bind_error}")
+            return
         if company is not None:
             await message.answer(
                 f"✅ Готово! Этот чат подключён к уведомлениям компании "
@@ -121,8 +136,13 @@ async def handle_start(message: Message, command: CommandObject) -> None:
             )
             return
         logger.info("Rejected admin bind attempt: unknown api_key in /start payload.")
-        # Fall through to the client greeting — an invalid deep-link payload
-        # shouldn't leave the user stuck with no response at all.
+
+    async with AsyncSessionLocal() as session:
+        if await is_staff_chat(session, tg_chat_id):
+            await message.answer(
+                "Вы подключены как сотрудник. Новые записи будут приходить сюда."
+            )
+            return
 
     await _send_client_greeting(message)
 
@@ -140,7 +160,15 @@ async def handle_plain_text(message: Message) -> None:
         return
 
     tg_chat_id = message.chat.id
-    company = await _bind_manager(api_key=text, tg_chat_id=tg_chat_id)
+    tg_username = message.from_user.username if message.from_user else None
+    company, bind_error = await _bind_manager(
+        api_key=text,
+        tg_chat_id=tg_chat_id,
+        telegram_username=tg_username,
+    )
+    if bind_error:
+        await message.answer(f"❌ {bind_error}")
+        return
     if company is not None:
         await message.answer(
             f"✅ Готово! Этот чат подключён к уведомлениям компании "
@@ -148,16 +176,34 @@ async def handle_plain_text(message: Message) -> None:
         )
         return
 
+    async with AsyncSessionLocal() as session:
+        if await is_staff_chat(session, tg_chat_id):
+            await message.answer(
+                "Вы уже подключены как сотрудник. Новые записи будут приходить сюда."
+            )
+            return
+
     await message.answer(
-        "Не удаётся распознать сообщение. Если вы администратор компании — "
-        "отправьте свой API-ключ. Если вы клиент — нажмите /start и поделитесь "
-        "номером телефона, чтобы посмотреть свои записи."
+        "Не удаётся распознать сообщение. Если вы сотрудник — отправьте API-ключ "
+        "компании (его добавляет администратор в кабинете ICS). "
+        "Если вы клиент — нажмите /start и поделитесь номером телефона."
     )
 
 
 @router.message(F.contact)
 async def handle_contact(message: Message) -> None:
     """Look up and list a client's active appointments by their shared phone number."""
+    tg_chat_id = message.chat.id
+
+    async with AsyncSessionLocal() as session:
+        if await is_staff_chat(session, tg_chat_id):
+            await message.answer(
+                "Вы подключены как сотрудник компании. "
+                "Клиентские записи доступны только клиентам через этот бот.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
     contact = message.contact
     if contact is None or not contact.phone_number:
         await message.answer("Не удалось прочитать номер телефона. Попробуйте ещё раз.")
@@ -258,13 +304,20 @@ async def handle_confirm_appointment(
 
             tg_chat_id = callback.message.chat.id if callback.message else None
             if tg_chat_id is not None:
+                staff_check = await session.execute(
+                    select(CompanyStaff).where(
+                        CompanyStaff.company_id == appointment.company_id,
+                        CompanyStaff.tg_chat_id == tg_chat_id,
+                        CompanyStaff.is_active.is_(True),
+                    )
+                )
                 manager_check = await session.execute(
                     select(CompanyManager).where(
                         CompanyManager.company_id == appointment.company_id,
                         CompanyManager.tg_chat_id == tg_chat_id,
                     )
                 )
-                if manager_check.scalars().first() is None:
+                if staff_check.scalars().first() is None and manager_check.scalars().first() is None:
                     await callback.answer(
                         "У вас нет прав подтверждать записи этой компании.",
                         show_alert=True,

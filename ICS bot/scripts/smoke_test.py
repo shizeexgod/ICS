@@ -45,7 +45,8 @@ async def run() -> None:
         print(f"   company={company.name!r} id={company_id} api_key={api_key!r}")
 
     print("\n3. Bind synthetic manager chat (simulates /start <api_key>)")
-    bound = await _bind_manager(api_key=api_key, tg_chat_id=TEST_CHAT_ID)
+    bound, bind_error = await _bind_manager(api_key=api_key, tg_chat_id=TEST_CHAT_ID)
+    assert bind_error is None, f"Manager bind error: {bind_error}"
     assert bound is not None, "Manager bind failed — api_key not found"
     print(f"   bound tg_chat_id={TEST_CHAT_ID} -> {bound.name}")
 

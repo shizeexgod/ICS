@@ -6,13 +6,14 @@ import datetime as dt
 import logging
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.client import Client
 from app.models.company import Company
 from app.services.scheduler import schedule_appointment_reminder
+from app.services.staff_service import normalize_phone
 from app.services.telegram_notifications import notify_company_managers_of_new_booking
 
 logger = logging.getLogger(__name__)
@@ -22,16 +23,22 @@ async def get_or_create_client(
     session: AsyncSession, *, company_id: uuid.UUID, full_name: str, phone: str
 ) -> Client:
     """Fetch an existing client by phone (scoped to company) or create one."""
+    normalized = normalize_phone(phone) or phone.strip()
     result = await session.execute(
-        select(Client).where(Client.company_id == company_id, Client.phone == phone)
+        select(Client).where(
+            Client.company_id == company_id,
+            func.regexp_replace(Client.phone, r"[^0-9]", "", "g") == normalized,
+        )
     )
     client = result.scalars().first()
     if client is not None:
         if client.full_name != full_name:
             client.full_name = full_name
+        if client.phone != normalized:
+            client.phone = normalized
         return client
 
-    client = Client(company_id=company_id, full_name=full_name, phone=phone)
+    client = Client(company_id=company_id, full_name=full_name, phone=normalized)
     session.add(client)
     await session.flush()
     return client

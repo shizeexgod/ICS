@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.appointment import Appointment
     from app.models.client import Client
     from app.models.company_manager import CompanyManager
+    from app.models.company_staff import CompanyStaff
 
 
 class Company(Base):
@@ -58,6 +59,9 @@ class Company(Base):
     )
     managers: Mapped[list["CompanyManager"]] = relationship(
         "CompanyManager", back_populates="company", cascade="all, delete-orphan"
+    )
+    staff: Mapped[list["CompanyStaff"]] = relationship(
+        "CompanyStaff", back_populates="company", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging helper
