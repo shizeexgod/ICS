@@ -26,7 +26,11 @@ from app.core.database import AsyncSessionLocal
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.company import Company
 from app.services.notifications import notify_client
-from app.services.plan_service import can_send_reminders, increment_reminders_used
+from app.services.plan_service import (
+    can_send_reminders,
+    expire_stale_subscriptions,
+    increment_reminders_used,
+)
 from app.services.template_service import build_appointment_context, get_template_text
 
 logger = logging.getLogger(__name__)
@@ -40,6 +44,15 @@ def start_scheduler() -> None:
     """Start the scheduler. Intended to be called once from FastAPI's lifespan."""
     if not scheduler.running:
         scheduler.start()
+        scheduler.add_job(
+            _expire_stale_subscriptions_job,
+            trigger="cron",
+            hour=3,
+            minute=15,
+            id="expire-stale-subscriptions",
+            replace_existing=True,
+            misfire_grace_time=60 * 60,
+        )
         logger.info("APScheduler started.")
 
 
@@ -185,3 +198,14 @@ async def _send_appointment_reminder(appointment_id: uuid.UUID) -> None:
         logger.exception(
             "Failed to send reminder notifications for appointment_id=%s", appointment_id
         )
+
+
+async def _expire_stale_subscriptions_job() -> None:
+    """Daily job: downgrade companies whose Pro/Max subscription has lapsed."""
+    logger.info("Running daily expire-stale-subscriptions job.")
+    try:
+        async with AsyncSessionLocal() as session:
+            expired_count = await expire_stale_subscriptions(session)
+            logger.info("expire-stale-subscriptions job expired %d company(ies).", expired_count)
+    except Exception:  # noqa: BLE001 - a broken cron job must never crash the scheduler
+        logger.exception("Failed to run expire-stale-subscriptions job.")

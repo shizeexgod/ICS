@@ -1,7 +1,8 @@
-"""YooKassa billing endpoints for ICS Pro subscriptions."""
+"""YooKassa billing endpoints for ICS Pro/Max subscriptions."""
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import uuid
 
@@ -21,7 +22,7 @@ from app.schemas.billing import (
     YooKassaWebhookEvent,
 )
 from app.services.billing_service import (
-    create_pro_payment,
+    create_plan_payment,
     process_successful_payment,
     yookassa_configured,
 )
@@ -50,10 +51,12 @@ async def get_billing_status(
     )
     latest = result.scalar_one_or_none()
     plan = company_plan_out(company)
-    is_pro = company.plan == "pro" and company.subscription_status == "active"
+    is_pro = company.plan in ("pro", "max") and company.subscription_status == "active"
     return BillingStatusOut(
         plan=company.plan,
         subscription_status=company.subscription_status,
+        billing_period=plan.billing_period,
+        subscription_ends_at=plan.subscription_ends_at,
         pro_price_rub=company.pro_price_rub,
         is_pro=is_pro,
         can_send_reminders=can_send_reminders(company),
@@ -67,11 +70,20 @@ async def create_payment(
     session: AsyncSession = Depends(get_db_session),
     company: Company = Depends(get_current_admin_company),
 ) -> CreatePaymentResponse:
-    """Create a YooKassa redirect payment for Pro subscription."""
-    if company.plan == "pro" and company.subscription_status == "active":
+    """Create a YooKassa redirect payment for a Pro/Max subscription."""
+    now = dt.datetime.now(dt.timezone.utc)
+    ends_at = company.subscription_ends_at
+    if ends_at is not None and ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=dt.timezone.utc)
+    has_future_subscription = ends_at is not None and ends_at > now
+    if (
+        company.plan == payload.plan
+        and company.subscription_status == "active"
+        and has_future_subscription
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Company already has an active Pro subscription.",
+            detail=f"Company already has an active {payload.plan.capitalize()} subscription.",
         )
 
     if not yookassa_configured():
@@ -83,9 +95,11 @@ async def create_payment(
     return_url = str(payload.return_url or _default_return_url())
 
     try:
-        payment_id, confirmation_url, amount_rub = await create_pro_payment(
+        payment_id, confirmation_url, amount_rub = await create_plan_payment(
             session,
             company=company,
+            plan=payload.plan,
+            billing_period=payload.billing_period,
             return_url=return_url,
         )
     except Exception:

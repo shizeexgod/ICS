@@ -14,6 +14,13 @@ from app.models.company_staff import CompanyStaff
 
 _DIGITS_ONLY_RE = re.compile(r"\D")
 
+# Max active staff per plan. None means unlimited.
+STAFF_LIMIT_BY_PLAN: dict[str, int | None] = {
+    "trial": 2,
+    "pro": 5,
+    "max": None,
+}
+
 
 def normalize_username(username: str | None) -> str | None:
     if not username:
@@ -52,6 +59,21 @@ async def company_has_active_staff(session: AsyncSession, company_id: uuid.UUID)
         )
     )
     return (result.scalar() or 0) > 0
+
+
+async def count_active_staff(session: AsyncSession, company_id: uuid.UUID) -> int:
+    result = await session.execute(
+        select(func.count(CompanyStaff.id)).where(
+            CompanyStaff.company_id == company_id,
+            CompanyStaff.is_active.is_(True),
+        )
+    )
+    return result.scalar() or 0
+
+
+def staff_limit_for_plan(plan: str) -> int | None:
+    """Return the max active staff allowed for `plan`, or None if unlimited."""
+    return STAFF_LIMIT_BY_PLAN.get(plan, STAFF_LIMIT_BY_PLAN["trial"])
 
 
 async def find_staff_for_binding(

@@ -42,6 +42,10 @@ class Company(Base):
     subscription_status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active"
     )
+    billing_period: Mapped[str] = mapped_column(String(10), nullable=False, default="monthly")
+    subscription_ends_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     reminders_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reminders_period_start: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

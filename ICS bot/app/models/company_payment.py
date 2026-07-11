@@ -26,6 +26,8 @@ class CompanyPayment(Base):
     )
     yookassa_payment_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     amount_rub: Mapped[int] = mapped_column(Integer, nullable=False)
+    plan: Mapped[str] = mapped_column(String(10), nullable=False, default="pro")
+    billing_period: Mapped[str] = mapped_column(String(10), nullable=False, default="monthly")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

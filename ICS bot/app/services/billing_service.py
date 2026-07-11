@@ -1,10 +1,11 @@
-"""YooKassa payment creation and Pro plan activation."""
+"""YooKassa payment creation and Pro/Max plan activation."""
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
 import uuid
+from typing import Literal
 
 import httpx
 from sqlalchemy import select
@@ -13,34 +14,39 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.company import Company
 from app.models.company_payment import CompanyPayment
-from app.services.plan_service import activate_pro_plan
+from app.schemas.company import PLAN_PRICING
+from app.services.plan_service import activate_paid_plan
 
 logger = logging.getLogger(__name__)
 
 _YOOKASSA_API = "https://api.yookassa.ru/v3/payments"
+
+_PERIOD_LABEL = {"monthly": "30 дней", "annual": "1 год"}
 
 
 def yookassa_configured() -> bool:
     return bool(settings.YOOKASSA_SHOP_ID and settings.YOOKASSA_SECRET_KEY)
 
 
-async def create_pro_payment(
+async def create_plan_payment(
     session: AsyncSession,
     *,
     company: Company,
+    plan: Literal["pro", "max"],
+    billing_period: Literal["monthly", "annual"],
     return_url: str,
 ) -> tuple[str, str, int]:
     """Create a YooKassa redirect payment and persist a pending row."""
     if not yookassa_configured():
         raise RuntimeError("YooKassa is not configured on the server.")
 
-    amount_rub = company.pro_price_rub or 5000
+    amount_rub = PLAN_PRICING[plan][billing_period]
     idempotence_key = str(uuid.uuid4())
     payload = {
         "amount": {"value": f"{amount_rub:.2f}", "currency": "RUB"},
         "confirmation": {"type": "redirect", "return_url": return_url},
         "capture": True,
-        "description": f"ICS Pro — {company.name}",
+        "description": f"ICS {plan.capitalize()} ({_PERIOD_LABEL[billing_period]}) — {company.name}",
         "metadata": {"company_id": str(company.id)},
     }
 
@@ -64,6 +70,8 @@ async def create_pro_payment(
         company_id=company.id,
         yookassa_payment_id=payment_id,
         amount_rub=amount_rub,
+        plan=plan,
+        billing_period=billing_period,
         status=data.get("status", "pending"),
     )
     session.add(payment_row)
@@ -89,7 +97,7 @@ async def process_successful_payment(
     payment_id: str,
     company_id: uuid.UUID | None = None,
 ) -> bool:
-    """Verify payment with YooKassa and upgrade company to Pro (idempotent)."""
+    """Verify payment with YooKassa and upgrade company to Pro/Max (idempotent)."""
     if not yookassa_configured():
         logger.warning("YooKassa not configured; cannot process payment_id=%s", payment_id)
         return False
@@ -110,11 +118,22 @@ async def process_successful_payment(
         return True
 
     now = dt.datetime.now(dt.timezone.utc)
+    # The webhook only carries the YooKassa payment id, not the plan/period the
+    # merchant selected — read those back off the row we stored when the
+    # payment was created. Fall back to pro/monthly only if that row is
+    # somehow missing (should not happen in normal flow).
+    plan: Literal["pro", "max"] = payment_row.plan if payment_row is not None else "pro"  # type: ignore[assignment]
+    billing_period: Literal["monthly", "annual"] = (
+        payment_row.billing_period if payment_row is not None else "monthly"  # type: ignore[assignment]
+    )
+
     if payment_row is None:
         payment_row = CompanyPayment(
             company_id=resolved_company_id,
             yookassa_payment_id=payment_id,
             amount_rub=int(float(data["amount"]["value"])),
+            plan=plan,
+            billing_period=billing_period,
             status="succeeded",
             paid_at=now,
         )
@@ -123,7 +142,13 @@ async def process_successful_payment(
         payment_row.status = "succeeded"
         payment_row.paid_at = now
 
-    await activate_pro_plan(session, resolved_company_id)
+    await activate_paid_plan(session, resolved_company_id, plan, billing_period)
     await session.commit()
-    logger.info("Activated Pro for company_id=%s via payment_id=%s", resolved_company_id, payment_id)
+    logger.info(
+        "Activated %s (%s) for company_id=%s via payment_id=%s",
+        plan,
+        billing_period,
+        resolved_company_id,
+        payment_id,
+    )
     return True

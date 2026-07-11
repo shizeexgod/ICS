@@ -44,7 +44,12 @@ from app.services.auth_service import create_access_token, create_refresh_token,
 from app.services.booking_service import create_company_appointment
 from app.services.notifications import notify_client
 from app.services.plan_service import company_plan_out, init_trial_fields
-from app.services.staff_service import company_has_active_staff, staff_out
+from app.services.staff_service import (
+    company_has_active_staff,
+    count_active_staff,
+    staff_limit_for_plan,
+    staff_out,
+)
 from app.services.template_service import (
     build_appointment_context,
     get_template_text,
@@ -299,6 +304,23 @@ async def create_company_staff(
     company: Company = Depends(get_current_admin_company),
 ) -> StaffOut:
     """Add an employee who may connect the Telegram bot."""
+    staff_limit = staff_limit_for_plan(company.plan)
+    if staff_limit is not None:
+        active_count = await count_active_staff(session, company.id)
+        if active_count >= staff_limit:
+            upgrade_hint = (
+                "Перейдите на Max для снятия лимита."
+                if company.plan == "pro"
+                else "Перейдите на тариф Pro или Max для увеличения лимита."
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Достигнут лимит сотрудников для тарифа "
+                    f"{company.plan.capitalize()} ({staff_limit}). {upgrade_hint}"
+                ),
+            )
+
     if payload.telegram_username:
         dup = await session.execute(
             select(CompanyStaff).where(

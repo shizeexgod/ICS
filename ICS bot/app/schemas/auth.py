@@ -14,15 +14,21 @@ _PHONE_CLEANUP_RE = re.compile(r"[^\d+]")
 
 class SendCodeRequest(BaseModel):
     email: EmailStr
-    name: str = Field(..., min_length=2, max_length=255)
+    # Optional: the "Войти" (login) flow only sends email for returning users,
+    # who already have a name on file. "Регистрация" still sends it.
+    name: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=32)
 
     @field_validator("name")
     @classmethod
-    def _strip_name(cls, value: str) -> str:
+    def _strip_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         value = value.strip()
         if not value:
-            raise ValueError("Name must not be empty.")
+            return None
+        if len(value) < 2:
+            raise ValueError("Name must be at least 2 characters.")
         return value
 
     @field_validator("phone")

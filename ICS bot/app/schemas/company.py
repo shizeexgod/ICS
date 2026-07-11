@@ -10,9 +10,17 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.schemas.appointment import AppointmentListItem
 from app.schemas.auth import UserOut
 
-TRIAL_DAYS = 7
+TRIAL_DAYS = 10
 TRIAL_REMINDER_LIMIT = 100
-PRO_PRICE_RUB = 5000
+
+PLAN_PRICING: dict[str, dict[str, int]] = {
+    "pro": {"monthly": 1490, "annual": 13900},
+    "max": {"monthly": 2690, "annual": 22900},
+}
+BILLING_PERIOD_DAYS: dict[str, int] = {"monthly": 30, "annual": 365}
+
+# Backward-compat default (display fallback when a company has no plan/period yet).
+PRO_PRICE_RUB = PLAN_PRICING["pro"]["monthly"]
 
 
 class CompanySetupRequest(BaseModel):
@@ -47,6 +55,8 @@ class CompanyPlanOut(BaseModel):
     plan: str
     trial_ends_at: datetime | None = None
     subscription_status: str
+    billing_period: str | None = None
+    subscription_ends_at: datetime | None = None
     reminders_used: int
     reminders_limit: int | None = None
     reminders_remaining: int | None = None
