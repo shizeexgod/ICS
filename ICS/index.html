@@ -466,7 +466,7 @@
           Войти
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button type="button" class="btn btn--ghost cabinet__submit" id="choiceRegisterBtn">Зарегистрировать предприятие</button>
+        <button type="button" class="btn btn--ghost cabinet__submit" id="choiceRegisterBtn">Регистрация</button>
       </div>
     </div>
 
@@ -620,6 +620,13 @@
             <p class="cabinet-app__lead">Здравствуйте, <strong id="dashboardUserName">—</strong>. Здесь сводка по напоминаниям и подключению сервиса.</p>
 
             <div class="plans-panel plans-panel--cabinet" id="cabinetPlans" data-plans-panel>
+              <div class="cabinet-promo" id="overviewPromoRow" hidden>
+                <label class="cabinet__field cabinet-promo__field">
+                  <span>Промокод <em class="cabinet__optional">скидка 10% на первую оплату</em></span>
+                  <input type="text" id="overviewPromoInput" placeholder="ABC12345" autocomplete="off" spellcheck="false" maxlength="16">
+                </label>
+                <p class="cabinet-promo__hint" id="overviewPromoHint" hidden></p>
+              </div>
               <div class="plans-toggle-row">
                 <div class="plans-toggle" data-billing-toggle data-period="monthly">
                   <span class="plans-toggle__thumb"></span>
@@ -767,13 +774,44 @@
                     <input type="text" name="service_name" id="calendarServiceName" required minlength="1" placeholder="Стрижка">
                   </label>
                   <div class="cabinet-calendar__form-row">
-                    <label class="cabinet__field">
+                    <label class="cabinet__field field-picker" id="calendarDateField">
                       <span>Дата</span>
-                      <input type="date" name="appointment_date" id="calendarDate" required>
+                      <button type="button" class="field-picker__trigger" id="calendarDateTrigger">
+                        <span id="calendarDateTriggerText">Выберите дату</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                      </button>
+                      <input type="hidden" name="appointment_date" id="calendarDate" required>
+                      <div class="field-picker__panel field-picker__panel--date" id="calendarDatePanel" hidden>
+                        <div class="field-picker__cal-head">
+                          <button type="button" class="cabinet-calendar__nav-btn" id="pickerPrevMonth" aria-label="Предыдущий месяц">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </button>
+                          <span id="pickerMonthLabel">—</span>
+                          <button type="button" class="cabinet-calendar__nav-btn" id="pickerNextMonth" aria-label="Следующий месяц">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18 15 12 9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </button>
+                        </div>
+                        <div class="field-picker__weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+                        <div class="field-picker__days" id="pickerDaysGrid" role="grid" aria-label="Выбор даты"></div>
+                      </div>
                     </label>
-                    <label class="cabinet__field">
+                    <label class="cabinet__field field-picker" id="calendarTimeField">
                       <span>Время</span>
-                      <input type="time" name="appointment_time" id="calendarTime" required>
+                      <button type="button" class="field-picker__trigger" id="calendarTimeTrigger">
+                        <span id="calendarTimeTriggerText">—:—</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+                      </button>
+                      <input type="hidden" name="appointment_time" id="calendarTime" required>
+                      <div class="field-picker__panel field-picker__panel--time" id="calendarTimePanel" hidden>
+                        <div class="field-picker__time-col">
+                          <span class="field-picker__time-label">Час</span>
+                          <div class="field-picker__time-list" id="pickerHourList" role="listbox" aria-label="Час"></div>
+                        </div>
+                        <div class="field-picker__time-col">
+                          <span class="field-picker__time-label">Мин</span>
+                          <div class="field-picker__time-list" id="pickerMinuteList" role="listbox" aria-label="Минуты"></div>
+                        </div>
+                      </div>
                     </label>
                   </div>
                   <p class="cabinet__error" id="calendarCreateError" hidden></p>
@@ -788,6 +826,13 @@
           <section class="cabinet-app__view" data-view-panel="settings" hidden>
             <p class="cabinet-app__lead">Параметры предприятия и управление подпиской.</p>
             <div class="plans-panel plans-panel--cabinet plans-panel--compact" id="settingsPlans" data-plans-panel>
+              <div class="cabinet-promo" id="settingsPromoRow" hidden>
+                <label class="cabinet__field cabinet-promo__field">
+                  <span>Промокод <em class="cabinet__optional">скидка 10% на первую оплату</em></span>
+                  <input type="text" id="settingsPromoInput" placeholder="ABC12345" autocomplete="off" spellcheck="false" maxlength="16">
+                </label>
+                <p class="cabinet-promo__hint" id="settingsPromoHint" hidden></p>
+              </div>
               <div class="plans-toggle-row">
                 <div class="plans-toggle" data-billing-toggle data-period="monthly">
                   <span class="plans-toggle__thumb"></span>
@@ -841,6 +886,27 @@
                 </article>
               </div>
             </div>
+
+            <article class="cabinet-app__card cabinet-app__card--wide cabinet-referral" id="referralCard">
+              <div class="cabinet-app__card-head">
+                <h3>Реферальная программа</h3>
+                <span class="cabinet-app__badge cabinet-app__badge--muted" id="referralCountBadge">0 приглашений</span>
+              </div>
+              <p class="cabinet-app__hint">Приглашайте новые предприятия — получайте <strong>20%</strong> от их первой оплаты подписки на баланс. Новый клиент получает скидку <strong>10%</strong> по вашему коду.</p>
+              <div class="cabinet-referral__stats">
+                <div class="cabinet-referral__stat">
+                  <span class="cabinet-referral__stat-label">Ваш код</span>
+                  <div class="cabinet-app__copy">
+                    <code id="referralCode">—</code>
+                    <button type="button" class="cabinet-app__copy-btn" data-copy-target="referralCode">Копировать</button>
+                  </div>
+                </div>
+                <div class="cabinet-referral__stat">
+                  <span class="cabinet-referral__stat-label">Баланс</span>
+                  <strong class="cabinet-referral__balance" id="referralBalance">0 ₽</strong>
+                </div>
+              </div>
+            </article>
 
             <form class="cabinet-app__settings" id="settingsForm">
               <div class="cabinet-app__settings-grid">

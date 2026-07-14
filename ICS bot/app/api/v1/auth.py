@@ -47,6 +47,14 @@ async def send_code(payload: SendCodeRequest) -> SendCodeResponse:
 
     try:
         async with AsyncSessionLocal() as session:
+            if payload.intent == "register":
+                existing = await session.execute(select(User).where(User.email == email))
+                if existing.scalar_one_or_none() is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Email already registered.",
+                    )
+
             stmt = (
                 insert(EmailVerification)
                 .values(

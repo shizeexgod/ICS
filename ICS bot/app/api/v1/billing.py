@@ -7,7 +7,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -19,6 +19,9 @@ from app.schemas.billing import (
     BillingStatusOut,
     CreatePaymentRequest,
     CreatePaymentResponse,
+    ReferralProgramOut,
+    ValidateReferralRequest,
+    ValidateReferralResponse,
     YooKassaWebhookEvent,
 )
 from app.services.billing_service import (
@@ -27,6 +30,14 @@ from app.services.billing_service import (
     yookassa_configured,
 )
 from app.services.plan_service import can_send_reminders, company_plan_out
+from app.services.referral_service import (
+    REFERRAL_DISCOUNT_PERCENT,
+    REFERRAL_REWARD_PERCENT,
+    apply_referral_to_payment_amount,
+    buyer_eligible_for_referral_discount,
+    ensure_company_referral_code,
+)
+from app.schemas.company import PLAN_PRICING
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +112,10 @@ async def create_payment(
             plan=payload.plan,
             billing_period=payload.billing_period,
             return_url=return_url,
+            referral_code=payload.referral_code,
         )
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Failed to create YooKassa payment for company_id=%s", company.id)
         raise HTTPException(
@@ -113,6 +127,54 @@ async def create_payment(
         payment_id=payment_id,
         confirmation_url=confirmation_url,
         amount_rub=amount_rub,
+    )
+
+
+@router.post("/validate-referral", response_model=ValidateReferralResponse)
+async def validate_referral_code(
+    payload: ValidateReferralRequest,
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> ValidateReferralResponse:
+    """Preview referral discount for the company's first paid subscription."""
+    original_amount_rub = PLAN_PRICING[payload.plan][payload.billing_period]
+    amount_rub, discount_rub, _ = await apply_referral_to_payment_amount(
+        session,
+        buyer=company,
+        original_amount_rub=original_amount_rub,
+        referral_code=payload.referral_code,
+    )
+    return ValidateReferralResponse(
+        discount_percent=REFERRAL_DISCOUNT_PERCENT,
+        discount_rub=discount_rub,
+        final_amount_rub=amount_rub,
+        original_amount_rub=original_amount_rub,
+    )
+
+
+@router.get("/referral", response_model=ReferralProgramOut)
+async def get_referral_program(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> ReferralProgramOut:
+    """Return referral code, balance and program terms for the dashboard."""
+    code = await ensure_company_referral_code(session, company)
+    referrals_result = await session.execute(
+        select(func.count())
+        .select_from(Company)
+        .where(Company.referred_by_company_id == company.id)
+    )
+    referrals_count = int(referrals_result.scalar() or 0)
+    await session.commit()
+
+    discount_available = await buyer_eligible_for_referral_discount(session, company)
+    return ReferralProgramOut(
+        code=code,
+        balance_rub=company.referral_balance_rub,
+        reward_percent=REFERRAL_REWARD_PERCENT,
+        discount_percent=REFERRAL_DISCOUNT_PERCENT,
+        referrals_count=referrals_count,
+        discount_available=discount_available,
     )
 
 

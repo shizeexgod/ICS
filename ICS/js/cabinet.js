@@ -91,8 +91,33 @@
   const calendarCreateSuccess = document.getElementById("calendarCreateSuccess");
   const calendarDate = document.getElementById("calendarDate");
   const calendarTime = document.getElementById("calendarTime");
+  const calendarDateField = document.getElementById("calendarDateField");
+  const calendarTimeField = document.getElementById("calendarTimeField");
+  const calendarDateTrigger = document.getElementById("calendarDateTrigger");
+  const calendarDateTriggerText = document.getElementById("calendarDateTriggerText");
+  const calendarDatePanel = document.getElementById("calendarDatePanel");
+  const pickerMonthLabel = document.getElementById("pickerMonthLabel");
+  const pickerPrevMonth = document.getElementById("pickerPrevMonth");
+  const pickerNextMonth = document.getElementById("pickerNextMonth");
+  const pickerDaysGrid = document.getElementById("pickerDaysGrid");
+  const calendarTimeTrigger = document.getElementById("calendarTimeTrigger");
+  const calendarTimeTriggerText = document.getElementById("calendarTimeTriggerText");
+  const calendarTimePanel = document.getElementById("calendarTimePanel");
+  const pickerHourList = document.getElementById("pickerHourList");
+  const pickerMinuteList = document.getElementById("pickerMinuteList");
   const templatesList = document.getElementById("templatesList");
   const templatesLoading = document.getElementById("templatesLoading");
+  const overviewPromoRow = document.getElementById("overviewPromoRow");
+  const settingsPromoRow = document.getElementById("settingsPromoRow");
+  const overviewPromoInput = document.getElementById("overviewPromoInput");
+  const settingsPromoInput = document.getElementById("settingsPromoInput");
+  const overviewPromoHint = document.getElementById("overviewPromoHint");
+  const settingsPromoHint = document.getElementById("settingsPromoHint");
+  const referralCode = document.getElementById("referralCode");
+  const referralBalance = document.getElementById("referralBalance");
+  const referralCountBadge = document.getElementById("referralCountBadge");
+
+  let referralProgram = null;
 
   let pendingEmail = "";
   let pendingName = "";
@@ -104,6 +129,9 @@
   let calendarAppointments = [];
   let calendarLoaded = false;
   let templatesLoaded = false;
+  let pickerMonth = new Date();
+  let pickerHour = null;
+  let pickerMinute = null;
 
   function apiBase() {
     return (window.ICS_API_BASE || "").replace(/\/$/, "");
@@ -192,6 +220,13 @@
         "У вас уже активна подписка Pro.",
       "Failed to create payment. Please try again later.":
         "Не удалось создать платёж. Попробуйте позже.",
+      "Email already registered.":
+        "Этот email уже зарегистрирован. Войдите с кодом из письма.",
+      "Referral code not found.": "Промокод не найден.",
+      "You cannot use your own referral code.": "Нельзя использовать свой промокод.",
+      "Referral discount is only available on the first paid subscription.":
+        "Скидка по промокоду доступна только при первой оплате подписки.",
+      "Invalid referral code.": "Некорректный промокод.",
       "Not Found": STAFF_BACKEND_HINT,
     };
     return map[message] || message;
@@ -298,17 +333,90 @@
     const btn = ev?.currentTarget || document.querySelector(`[data-plan-cta="${plan}"]:not([hidden])`);
     const panel = btn?.closest("[data-plans-panel]");
     const billingPeriod = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
+    const promoInput = panel?.querySelector(".cabinet-promo input") || overviewPromoInput || settingsPromoInput;
+    const referralCodeValue = promoInput?.value.trim().toUpperCase() || null;
     setButtonLoading(btn, true, "Переход к оплате…");
     const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
     try {
+      const body = { return_url: returnUrl, plan, billing_period: billingPeriod };
+      if (referralCodeValue) body.referral_code = referralCodeValue;
       const data = await apiFetch("/api/v1/billing/create-payment", {
         method: "POST",
-        body: JSON.stringify({ return_url: returnUrl, plan, billing_period: billingPeriod }),
+        body: JSON.stringify(body),
       });
       window.location.href = data.confirmation_url;
     } catch (err) {
       alert(err.message);
       setButtonLoading(btn, false);
+    }
+  }
+
+  function syncPromoRows(program) {
+    const show = Boolean(program?.discount_available);
+    [overviewPromoRow, settingsPromoRow].forEach((row) => {
+      if (row) row.hidden = !show;
+    });
+    if (show && program?.prefill_code) {
+      if (overviewPromoInput && !overviewPromoInput.value) overviewPromoInput.value = program.prefill_code;
+      if (settingsPromoInput && !settingsPromoInput.value) settingsPromoInput.value = program.prefill_code;
+    }
+  }
+
+  function syncReferralCard(program) {
+    if (!program) return;
+    if (referralCode) referralCode.textContent = program.code || "—";
+    if (referralBalance) {
+      referralBalance.textContent = `${(program.balance_rub ?? 0).toLocaleString("ru-RU")} ₽`;
+    }
+    if (referralCountBadge) {
+      const count = program.referrals_count ?? 0;
+      const n = Math.abs(count) % 100;
+      const n1 = n % 10;
+      let word = "приглашений";
+      if (n < 10 || n > 20) {
+        if (n1 === 1) word = "приглашение";
+        else if (n1 >= 2 && n1 <= 4) word = "приглашения";
+      }
+      referralCountBadge.textContent = `${count} ${word}`;
+    }
+    syncPromoRows(program);
+  }
+
+  async function loadReferralProgram() {
+    if (!getToken()) return;
+    const urlRef = new URLSearchParams(window.location.search).get("ref");
+    try {
+      const data = await apiFetch("/api/v1/billing/referral");
+      referralProgram = { ...data, prefill_code: urlRef ? urlRef.trim().toUpperCase() : null };
+      syncReferralCard(referralProgram);
+    } catch {
+      referralProgram = urlRef ? { discount_available: true, prefill_code: urlRef.trim().toUpperCase() } : null;
+      syncPromoRows(referralProgram);
+    }
+  }
+
+  async function previewPromoCode(inputEl, hintEl, plan = "pro") {
+    const code = inputEl?.value.trim().toUpperCase();
+    if (!hintEl) return;
+    if (!code) {
+      hintEl.hidden = true;
+      hintEl.textContent = "";
+      return;
+    }
+    const panel = inputEl.closest("[data-plans-panel]");
+    const billingPeriod = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
+    try {
+      const data = await apiFetch("/api/v1/billing/validate-referral", {
+        method: "POST",
+        body: JSON.stringify({ referral_code: code, plan, billing_period: billingPeriod }),
+      });
+      hintEl.textContent = `Скидка ${data.discount_percent}%: −${data.discount_rub.toLocaleString("ru-RU")} ₽, к оплате ${data.final_amount_rub.toLocaleString("ru-RU")} ₽`;
+      hintEl.hidden = false;
+      hintEl.classList.remove("cabinet-promo__hint--error");
+    } catch (err) {
+      hintEl.textContent = formatApiError(err.message);
+      hintEl.hidden = false;
+      hintEl.classList.add("cabinet-promo__hint--error");
     }
   }
 
@@ -601,11 +709,14 @@
     } else if (viewId === "overview") {
       loadDashboardStats();
       loadTelegramStatus();
+      loadReferralProgram();
     } else if (viewId === "telegram") {
       loadStaffList();
       loadTelegramStatus();
     } else if (viewId === "templates") {
       loadTemplates();
+    } else if (viewId === "settings") {
+      loadReferralProgram();
     }
   }
 
@@ -618,6 +729,7 @@
     switchView(activeView);
     loadDashboardStats();
     loadTelegramStatus();
+    loadReferralProgram();
   }
 
   function warmUpBackend() {
@@ -740,7 +852,7 @@
 
       const data = await apiFetch("/api/v1/auth/send-code", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, intent: "register" }),
       });
 
       verifyEmailDisplay.textContent = pendingEmail;
@@ -756,7 +868,15 @@
       pendingAuthStep = stepRegister;
       showStep(stepVerify);
     } catch (err) {
-      showError(registerError, formatApiError(err.message));
+      const msg = formatApiError(err.message);
+      if (msg.includes("уже зарегистрирован")) {
+        loginForm.querySelector('input[name="email"]').value = pendingEmail;
+        showError(registerError, "");
+        showError(loginError, msg);
+        showStep(stepLogin);
+        return;
+      }
+      showError(registerError, msg);
     } finally {
       setButtonLoading(btn, false);
     }
@@ -790,7 +910,7 @@
     try {
       const data = await apiFetch("/api/v1/auth/send-code", {
         method: "POST",
-        body: JSON.stringify({ email: pendingEmail }),
+        body: JSON.stringify({ email: pendingEmail, intent: "login" }),
       });
 
       verifyEmailDisplay.textContent = pendingEmail;
@@ -1125,6 +1245,7 @@
   function selectCalendarDay(key) {
     calendarSelectedDate = key;
     if (calendarDate) calendarDate.value = key;
+    if (calendarDateTriggerText) calendarDateTriggerText.textContent = formatDateTriggerText(key);
     renderCalendarGrid();
     renderCalendarDayList();
   }
@@ -1140,6 +1261,9 @@
       renderCalendarDayList();
       if (calendarDate && !calendarDate.value) {
         calendarDate.value = calendarSelectedDate;
+        if (calendarDateTriggerText) {
+          calendarDateTriggerText.textContent = formatDateTriggerText(calendarSelectedDate);
+        }
       }
     } catch (err) {
       calendarGrid.innerHTML = `<p class="cabinet__error">${err.message}</p>`;
@@ -1150,6 +1274,185 @@
     calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
     renderCalendarGrid();
   }
+
+  /* ============ Custom date/time field pickers ============ */
+  function formatDateTriggerText(key) {
+    if (!key) return "Выберите дату";
+    const date = parseDateKey(key);
+    return `${date.getDate()} ${MONTH_NAMES[date.getMonth()].toLowerCase()} ${date.getFullYear()}`;
+  }
+
+  function closeAllFieldPickers(except) {
+    [calendarDateField, calendarTimeField].forEach((field) => {
+      if (field && field !== except) field.classList.remove("is-open");
+    });
+    if (calendarDatePanel && calendarDateField !== except) calendarDatePanel.hidden = true;
+    if (calendarTimePanel && calendarTimeField !== except) calendarTimePanel.hidden = true;
+  }
+
+  function positionFieldPanel(field, panel) {
+    // The panel is position:fixed, but an ancestor (.cabinet__panel) has a
+    // CSS transform, which makes it the containing block for fixed
+    // descendants. Compute coordinates relative to that ancestor instead of
+    // the raw viewport so the panel lands next to its trigger regardless.
+    const anchor = field.closest(".cabinet__panel") || document.body;
+    const anchorRect = anchor.getBoundingClientRect();
+    const fieldRect = field.getBoundingClientRect();
+    let top = fieldRect.bottom - anchorRect.top + 8;
+    let left = fieldRect.left - anchorRect.left;
+    panel.style.top = `${top}px`;
+    panel.style.left = `${left}px`;
+    panel.hidden = false;
+    // Clamp horizontally so the panel doesn't run off the right edge.
+    const panelRect = panel.getBoundingClientRect();
+    const overflowRight = panelRect.right - anchorRect.right;
+    if (overflowRight > 0) {
+      left = Math.max(8, left - overflowRight - 8);
+      panel.style.left = `${left}px`;
+    }
+    const overflowBottom = panelRect.bottom - anchorRect.bottom;
+    if (overflowBottom > 0) {
+      top = fieldRect.top - anchorRect.top - panelRect.height - 8;
+      panel.style.top = `${Math.max(8, top)}px`;
+    }
+  }
+
+  function toggleFieldPicker(field, panel) {
+    const isOpen = field.classList.contains("is-open");
+    closeAllFieldPickers();
+    if (isOpen) return;
+    field.classList.add("is-open");
+    positionFieldPanel(field, panel);
+  }
+
+  function renderPickerDays() {
+    if (!pickerDaysGrid || !pickerMonthLabel) return;
+    const year = pickerMonth.getFullYear();
+    const month = pickerMonth.getMonth();
+    pickerMonthLabel.textContent = `${MONTH_NAMES[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayKey = toDateKey(new Date());
+    const selectedKey = calendarDate?.value || "";
+
+    pickerDaysGrid.innerHTML = "";
+    for (let i = 0; i < startOffset; i += 1) {
+      const empty = document.createElement("span");
+      empty.className = "field-picker__day-empty";
+      pickerDaysGrid.appendChild(empty);
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const key = toDateKey(new Date(year, month, day));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = String(day);
+      if (key === todayKey) btn.classList.add("is-today");
+      if (key === selectedKey) btn.classList.add("is-selected");
+      btn.addEventListener("click", () => {
+        if (calendarDate) calendarDate.value = key;
+        if (calendarDateTriggerText) calendarDateTriggerText.textContent = formatDateTriggerText(key);
+        closeAllFieldPickers();
+        calendarDateField?.classList.remove("is-open");
+        if (calendarDatePanel) calendarDatePanel.hidden = true;
+      });
+      pickerDaysGrid.appendChild(btn);
+    }
+  }
+
+  function shiftPickerMonth(delta) {
+    pickerMonth = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + delta, 1);
+    renderPickerDays();
+  }
+
+  function syncTimeTriggerText() {
+    if (!calendarTimeTriggerText) return;
+    if (pickerHour == null) {
+      calendarTimeTriggerText.textContent = "—:—";
+      return;
+    }
+    const h = String(pickerHour).padStart(2, "0");
+    const m = String(pickerMinute ?? 0).padStart(2, "0");
+    calendarTimeTriggerText.textContent = `${h}:${m}`;
+  }
+
+  function commitTimeIfComplete() {
+    if (pickerHour == null) return;
+    const minute = pickerMinute ?? 0;
+    const value = `${String(pickerHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    if (calendarTime) calendarTime.value = value;
+    syncTimeTriggerText();
+  }
+
+  function initPickerTimeFromValue() {
+    const current = calendarTime?.value || "";
+    const [curH, curM] = current ? current.split(":").map(Number) : [null, null];
+    pickerHour = Number.isFinite(curH) ? curH : null;
+    pickerMinute = Number.isFinite(curM) ? curM : null;
+  }
+
+  function renderPickerTime() {
+    if (!pickerHourList || !pickerMinuteList) return;
+
+    pickerHourList.innerHTML = "";
+    for (let h = 0; h < 24; h += 1) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = String(h).padStart(2, "0");
+      if (h === pickerHour) btn.classList.add("is-selected");
+      btn.addEventListener("click", () => {
+        pickerHour = h;
+        if (pickerMinute == null) pickerMinute = 0;
+        renderPickerTime();
+        commitTimeIfComplete();
+      });
+      pickerHourList.appendChild(btn);
+    }
+
+    pickerMinuteList.innerHTML = "";
+    [0, 15, 30, 45].forEach((m) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = String(m).padStart(2, "0");
+      if (m === pickerMinute) btn.classList.add("is-selected");
+      btn.addEventListener("click", () => {
+        pickerMinute = m;
+        renderPickerTime();
+        commitTimeIfComplete();
+        closeAllFieldPickers();
+        calendarTimeField?.classList.remove("is-open");
+        if (calendarTimePanel) calendarTimePanel.hidden = true;
+      });
+      pickerMinuteList.appendChild(btn);
+    });
+
+    syncTimeTriggerText();
+  }
+
+  calendarDateTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (calendarDate?.value) pickerMonth = parseDateKey(calendarDate.value);
+    renderPickerDays();
+    toggleFieldPicker(calendarDateField, calendarDatePanel);
+  });
+  calendarTimeTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    initPickerTimeFromValue();
+    renderPickerTime();
+    toggleFieldPicker(calendarTimeField, calendarTimePanel);
+  });
+  pickerPrevMonth?.addEventListener("click", (e) => { e.stopPropagation(); shiftPickerMonth(-1); });
+  pickerNextMonth?.addEventListener("click", (e) => { e.stopPropagation(); shiftPickerMonth(1); });
+  calendarDatePanel?.addEventListener("click", (e) => e.stopPropagation());
+  calendarTimePanel?.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => closeAllFieldPickers());
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAllFieldPickers();
+  });
+  // Scroll events don't bubble, so listen on the capture phase to catch
+  // scrolling inside .cabinet-app__view and close any open panel.
+  document.addEventListener("scroll", () => closeAllFieldPickers(), true);
 
   let bookingsLoadSeq = 0;
   const ACTIVE_BOOKING_STATUSES = new Set(["pending", "confirmed"]);
@@ -1529,6 +1832,12 @@
       appointment_time: String(formData.get("appointment_time") || ""),
     };
 
+    if (!payload.appointment_date || !payload.appointment_time) {
+      showError(calendarCreateError, "Выберите дату и время записи.");
+      setButtonLoading(submitBtn, false);
+      return;
+    }
+
     try {
       await apiFetch("/api/v1/company/appointments", {
         method: "POST",
@@ -1546,6 +1855,12 @@
       calendarCreateForm.reset();
       if (calendarDate) calendarDate.value = calendarSelectedDate;
       if (calendarTime) calendarTime.value = payload.appointment_time;
+      if (calendarDateTriggerText) {
+        calendarDateTriggerText.textContent = formatDateTriggerText(calendarSelectedDate);
+      }
+      if (calendarTimeTriggerText) {
+        calendarTimeTriggerText.textContent = payload.appointment_time || "—:—";
+      }
     } catch (err) {
       showError(calendarCreateError, err.message);
     } finally {
@@ -1666,4 +1981,17 @@
 
   initPlansPanels();
   initBillingToggles();
+
+  function initReferralPromo() {
+    const pairs = [
+      [overviewPromoInput, overviewPromoHint],
+      [settingsPromoInput, settingsPromoHint],
+    ];
+    pairs.forEach(([input, hint]) => {
+      input?.addEventListener("change", () => previewPromoCode(input, hint));
+      input?.addEventListener("blur", () => previewPromoCode(input, hint));
+    });
+  }
+
+  initReferralPromo();
 })();

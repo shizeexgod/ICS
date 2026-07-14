@@ -6,7 +6,7 @@ import datetime as dt
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,14 @@ class Company(Base):
         DateTime(timezone=True), nullable=True
     )
     pro_price_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=5000)
+    referral_code: Mapped[str | None] = mapped_column(String(16), nullable=True, unique=True)
+    referred_by_company_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    referral_balance_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    referral_discount_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

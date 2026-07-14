@@ -6,6 +6,8 @@ import re
 import uuid
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 _CODE_RE = re.compile(r"^\d{4}$")
@@ -18,6 +20,7 @@ class SendCodeRequest(BaseModel):
     # who already have a name on file. "Регистрация" still sends it.
     name: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=32)
+    intent: Literal["login", "register"] = "login"
 
     @field_validator("name")
     @classmethod

@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,14 @@ class CompanyPayment(Base):
     )
     yookassa_payment_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     amount_rub: Mapped[int] = mapped_column(Integer, nullable=False)
+    original_amount_rub: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    discount_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    referrer_company_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    referral_reward_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     plan: Mapped[str] = mapped_column(String(10), nullable=False, default="pro")
     billing_period: Mapped[str] = mapped_column(String(10), nullable=False, default="monthly")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")

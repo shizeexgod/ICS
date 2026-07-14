@@ -44,6 +44,7 @@ from app.services.auth_service import create_access_token, create_refresh_token,
 from app.services.booking_service import create_company_appointment
 from app.services.notifications import notify_client
 from app.services.plan_service import company_plan_out, init_trial_fields
+from app.services.referral_service import ensure_company_referral_code
 from app.services.staff_service import (
     company_has_active_staff,
     count_active_staff,
@@ -117,6 +118,7 @@ async def setup_company(
 
     try:
         await session.flush()
+        await ensure_company_referral_code(session, company)
         user.company_id = company.id
         user.role = "admin"
         await session.commit()

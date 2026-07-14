@@ -1796,6 +1796,56 @@ body.cabinet-open .footer {
   font-size: 11px;
   color: var(--accent-2);
 }
+
+.cabinet-promo {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, var(--accent) 30%);
+  background: rgba(var(--surface-rgb), 0.28);
+}
+.cabinet-promo__field {
+  margin: 0;
+}
+.cabinet-promo__hint {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--accent);
+  line-height: 1.45;
+}
+.cabinet-promo__hint--error {
+  color: #ff8a98;
+}
+
+.cabinet-referral {
+  margin-bottom: 16px;
+}
+.cabinet-referral__stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+.cabinet-referral__stat-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.cabinet-referral__balance {
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .cabinet-referral__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 700px) {
   .cabinet-staff__form-grid {
     grid-template-columns: 1fr;
@@ -2848,6 +2898,55 @@ body.cabinet-open .footer {
   margin-bottom: 16px;
 }
 
+/* ---- Wide screens: side-by-side plan columns instead of stacked rows ---- */
+@media (min-width: 640px) {
+  .plans-panel--landing {
+    max-width: 880px;
+  }
+
+  .plans-panel__frame {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .plan-card {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plan-card__features {
+    flex: 1;
+  }
+
+  .plans-panel__frame .plan-card + .plan-card {
+    border-top: 1px solid var(--border);
+    margin-top: 0;
+  }
+
+  .plans-panel__frame .plan-card.is-active + .plan-card,
+  .plans-panel__frame .plan-card + .plan-card.is-active {
+    border-top-color: var(--border);
+  }
+
+  .plans-panel__frame .plan-card.is-active {
+    border-top-color: transparent;
+  }
+
+  /* The sliding highlight glow is tuned for vertical stacking; on a column
+     grid each card's own border/shadow already reads clearly as active. */
+  .plans-panel__highlight {
+    display: none;
+  }
+
+  .plan-card.is-active {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .plan-card--max.is-active {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--max) 34%, transparent);
+  }
+}
+
 /* ============ Cabinet calendar ============ */
 .cabinet-calendar {
   display: grid;
@@ -2978,7 +3077,6 @@ body.cabinet-open .footer {
   border: 1px solid var(--border);
   background: var(--surface-2);
   min-width: 0;
-  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -3061,6 +3159,160 @@ body.cabinet-open .footer {
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* ---- Custom date/time picker (replaces native input[type=date/time]) ---- */
+.field-picker {
+  position: relative;
+}
+.field-picker__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.field-picker__trigger span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field-picker__trigger svg { flex-shrink: 0; color: var(--text-faint); }
+.field-picker__trigger:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.field-picker__trigger:focus { outline: none; }
+.field-picker__trigger:focus-visible,
+.field-picker.is-open .field-picker__trigger {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.field-picker__panel {
+  position: fixed;
+  z-index: 400;
+  top: 0;
+  left: 0;
+  min-width: 260px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(var(--surface-rgb), 0.98);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+  animation: picker-pop .18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes picker-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.field-picker__cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.field-picker__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-align: center;
+}
+.field-picker__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.field-picker__days button {
+  appearance: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.field-picker__days button:hover:not(:disabled) { background: var(--surface-2); }
+.field-picker__days button:disabled { color: var(--text-faint); opacity: 0.35; cursor: default; }
+.field-picker__days button.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+.field-picker__days button.is-selected {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: #06101f;
+  transform: scale(1.04);
+}
+.field-picker__days span.field-picker__day-empty { visibility: hidden; }
+
+.field-picker__panel--time {
+  display: flex;
+  gap: 10px;
+  min-width: 200px;
+  max-height: 220px;
+}
+.field-picker__panel[hidden] {
+  display: none;
+}
+.field-picker__time-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.field-picker__time-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.field-picker__time-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 190px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+.field-picker__time-list button {
+  appearance: none;
+  border: none;
+  padding: 9px 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.field-picker__time-list button:hover { background: var(--surface); }
+.field-picker__time-list button.is-selected {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: #06101f;
 }
 
 @media (max-width: 560px) {

@@ -13,6 +13,43 @@ class CreatePaymentRequest(BaseModel):
     plan: Literal["pro", "max"]
     billing_period: Literal["monthly", "annual"]
     return_url: HttpUrl | str | None = None
+    referral_code: str | None = Field(default=None, max_length=16)
+
+    @field_validator("referral_code")
+    @classmethod
+    def _strip_referral_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip().upper()
+        return value or None
+
+
+class ValidateReferralRequest(BaseModel):
+    referral_code: str = Field(..., min_length=4, max_length=16)
+    plan: Literal["pro", "max"] = "pro"
+    billing_period: Literal["monthly", "annual"] = "monthly"
+
+    @field_validator("referral_code")
+    @classmethod
+    def _strip_referral_code(cls, value: str) -> str:
+        return value.strip().upper()
+
+
+class ValidateReferralResponse(BaseModel):
+    ok: bool = True
+    discount_percent: int
+    discount_rub: int
+    final_amount_rub: int
+    original_amount_rub: int
+
+
+class ReferralProgramOut(BaseModel):
+    code: str
+    balance_rub: int
+    reward_percent: int
+    discount_percent: int
+    referrals_count: int
+    discount_available: bool
 
 
 class CreatePaymentResponse(BaseModel):
