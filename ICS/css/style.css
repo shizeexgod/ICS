@@ -1604,11 +1604,6 @@ body.cabinet-open .footer {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
-.cabinet-app__badge--ok {
-  color: #7ee787;
-  background: rgba(126, 231, 135, 0.1);
-  border-color: rgba(126, 231, 135, 0.25);
-}
 .cabinet-app__manager-item {
   font-size: 13px;
   color: var(--text-dim);
@@ -2542,9 +2537,15 @@ body.cabinet-open .footer {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  border: 1px solid transparent;
   background: rgba(255, 107, 122, 0.12);
   color: #ff8a98;
   white-space: nowrap;
+}
+.cabinet-app__badge--ok {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.1);
+  border-color: rgba(126, 231, 135, 0.25);
 }
 .cabinet-app__badge--muted {
   background: var(--accent-soft);

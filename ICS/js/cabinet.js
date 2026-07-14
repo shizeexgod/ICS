@@ -221,6 +221,8 @@
       "Referral discount is only available on the first paid subscription.":
         "Скидка по промокоду доступна только при первой оплате подписки.",
       "Invalid referral code.": "Некорректный промокод.",
+      "Failed to update template.": "Не удалось сохранить шаблон. Проверьте подключение к серверу.",
+      "Failed to save template.": "Не удалось сохранить шаблон. Проверьте подключение к серверу.",
       "Not Found": STAFF_BACKEND_HINT,
     };
     return map[message] || message;
@@ -748,12 +750,18 @@
     }
   }
 
+  function setTelegramStatusBadge(connected) {
+    if (!telegramStatus) return;
+    telegramStatus.textContent = connected ? "Подключено" : "Не подключено";
+    telegramStatus.classList.remove("cabinet-app__badge--muted");
+    telegramStatus.classList.toggle("cabinet-app__badge--ok", connected);
+  }
+
   async function loadTelegramStatus() {
     if (!telegramStatus) return;
     try {
       const data = await apiFetch("/api/v1/company/telegram");
-      telegramStatus.textContent = data.connected ? "Подключено" : "Не подключено";
-      telegramStatus.classList.toggle("cabinet-app__badge--ok", data.connected);
+      setTelegramStatusBadge(Boolean(data.connected));
 
       const checklistItem = document.querySelector('#setupChecklist li[data-check="telegram"]');
       if (checklistItem) {
@@ -776,7 +784,7 @@
         })
         .join("");
     } catch {
-      telegramStatus.textContent = "Не подключено";
+      setTelegramStatusBadge(false);
     }
   }
 
@@ -867,6 +875,7 @@
       loadStaffList();
       loadTelegramStatus();
     } else if (viewId === "templates") {
+      warmUpBackend();
       loadTemplates();
     } else if (viewId === "settings") {
       loadReferralProgram();
@@ -1456,6 +1465,25 @@
     return `${date.getDate()} ${MONTH_NAMES[date.getMonth()].toLowerCase()} ${date.getFullYear()}`;
   }
 
+  function isInsideFieldPicker(el) {
+    return Boolean(
+      el?.closest?.(".field-picker__panel, .field-picker__time-list")
+    );
+  }
+
+  function isFieldPickerControl(el) {
+    return Boolean(el?.closest?.(".field-picker"));
+  }
+
+  function bindFieldPickerGuards() {
+    [calendarDatePanel, calendarTimePanel, pickerHourList, pickerMinuteList].forEach((el) => {
+      if (!el) return;
+      el.addEventListener("mousedown", (e) => e.stopPropagation());
+      el.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
+      el.addEventListener("scroll", (e) => e.stopPropagation(), true);
+    });
+  }
+
   function closeAllFieldPickers(except) {
     [calendarDateField, calendarTimeField].forEach((field) => {
       if (field && field !== except) field.classList.remove("is-open");
@@ -1620,19 +1648,17 @@
   pickerNextMonth?.addEventListener("click", (e) => { e.stopPropagation(); shiftPickerMonth(1); });
   calendarDatePanel?.addEventListener("click", (e) => e.stopPropagation());
   calendarTimePanel?.addEventListener("click", (e) => e.stopPropagation());
-  document.addEventListener("click", () => closeAllFieldPickers());
+  bindFieldPickerGuards();
+  document.addEventListener("click", (e) => {
+    if (isFieldPickerControl(e.target)) return;
+    closeAllFieldPickers();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAllFieldPickers();
   });
-  // Scroll events don't bubble, so listen on the capture phase to catch
-  // scrolling inside .cabinet-app__view and close any open panel.
-  // EXCEPT: do not close time/date pickers when scrolling inside them
   document.addEventListener("scroll", (e) => {
-    const scrolledEl = e.target;
-    const isInsidePicker = scrolledEl?.closest?.(".calendar-time-panel");
-    if (!isInsidePicker) {
-      closeAllFieldPickers();
-    }
+    if (isInsideFieldPicker(e.target)) return;
+    closeAllFieldPickers();
   }, true);
 
   let bookingsLoadSeq = 0;
@@ -1929,6 +1955,7 @@
     }
 
     btn.disabled = true;
+    warmUpBackend();
     try {
       await apiFetch(`/api/v1/templates/${eventType}`, {
         method: "PATCH",
