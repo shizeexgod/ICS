@@ -107,12 +107,6 @@
   const pickerMinuteList = document.getElementById("pickerMinuteList");
   const templatesList = document.getElementById("templatesList");
   const templatesLoading = document.getElementById("templatesLoading");
-  const overviewPromoRow = document.getElementById("overviewPromoRow");
-  const settingsPromoRow = document.getElementById("settingsPromoRow");
-  const overviewPromoInput = document.getElementById("overviewPromoInput");
-  const settingsPromoInput = document.getElementById("settingsPromoInput");
-  const overviewPromoHint = document.getElementById("overviewPromoHint");
-  const settingsPromoHint = document.getElementById("settingsPromoHint");
   const referralCode = document.getElementById("referralCode");
   const referralBalance = document.getElementById("referralBalance");
   const referralCountBadge = document.getElementById("referralCountBadge");
@@ -309,7 +303,7 @@
       const cta = card.querySelector("[data-plan-cta]");
       if (cta && (planType === "pro" || planType === "max")) {
         cta.hidden = isActive;
-        cta.textContent = `Оплатить ${PLAN_LABEL[planType]}`;
+        cta.textContent = "Оплатить";
         cta.onclick = (ev) => startPlanPayment(planType, ev);
       }
     });
@@ -341,12 +335,16 @@
     const btn = ev?.currentTarget || document.querySelector(`[data-plan-cta="${plan}"]:not([hidden])`);
     const panel = btn?.closest("[data-plans-panel]");
     const billingPeriod = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
-    const promoInput = panel?.querySelector(".cabinet-promo input") || overviewPromoInput || settingsPromoInput;
-    
+
     pendingPaymentPlan = plan;
     pendingPaymentPeriod = billingPeriod;
-    
-    showPaymentModal(plan, billingPeriod, promoInput?.value.trim().toUpperCase() || "");
+
+    const prefillCode =
+      referralProgram?.discount_available && referralProgram?.prefill_code
+        ? referralProgram.prefill_code
+        : "";
+
+    showPaymentModal(plan, billingPeriod, prefillCode);
   }
 
   function showPaymentModal(plan, period, promoCode) {
@@ -357,36 +355,43 @@
     const amountEl = document.getElementById("paymentAmount");
     const promoInputEl = document.getElementById("paymentPromoInput");
     const promoHintEl = document.getElementById("paymentPromoHint");
-    
+    const promoSection = document.getElementById("paymentPromoSection");
+
     if (!modal) return;
-    
+
     const user = getStoredUser();
+    const profile = getCompanyProfile();
     planEl.textContent = PLAN_LABEL[plan] || plan;
     periodEl.textContent = PERIOD_LABEL[period] || period;
-    emailEl.textContent = user?.email || "—";
-    
+    emailEl.textContent = profile?.ownerEmail || user?.email || "—";
+
     const baseAmount = PLAN_PRICING[plan]?.[period] || 0;
     amountEl.textContent = `${baseAmount.toLocaleString("ru-RU")} ₽`;
     amountEl.dataset.baseAmount = baseAmount;
-    
+
+    const showPromo = Boolean(referralProgram?.discount_available);
+    if (promoSection) promoSection.hidden = !showPromo;
+
     if (promoInputEl) {
-      promoInputEl.value = promoCode;
+      promoInputEl.value = showPromo ? promoCode : "";
+      promoHintEl.hidden = true;
+      promoHintEl.textContent = "";
+      promoHintEl.style.color = "";
       promoInputEl.oninput = () => {
         const code = promoInputEl.value.trim().toUpperCase();
         if (code) {
           previewModalPromo(code, plan, period, amountEl, promoHintEl);
         } else {
-          const base = parseInt(amountEl.dataset.baseAmount) || baseAmount;
-          amountEl.textContent = `${base.toLocaleString("ru-RU")} ₽`;
+          amountEl.textContent = `${baseAmount.toLocaleString("ru-RU")} ₽`;
           promoHintEl.hidden = true;
         }
       };
     }
-    
+
     modal.hidden = false;
     document.body.style.overflow = "hidden";
-    
-    if (promoCode) {
+
+    if (showPromo && promoCode) {
       previewModalPromo(promoCode, plan, period, amountEl, promoHintEl);
     }
   }
@@ -471,15 +476,8 @@
     if (overlay) overlay.addEventListener("click", closePaymentModal);
   }
 
-  function syncPromoRows(program) {
-    const show = Boolean(program?.discount_available);
-    [overviewPromoRow, settingsPromoRow].forEach((row) => {
-      if (row) row.hidden = !show;
-    });
-    if (show && program?.prefill_code) {
-      if (overviewPromoInput && !overviewPromoInput.value) overviewPromoInput.value = program.prefill_code;
-      if (settingsPromoInput && !settingsPromoInput.value) settingsPromoInput.value = program.prefill_code;
-    }
+  function syncPromoRows() {
+    /* Промокод вводится только в модальном окне оплаты */
   }
 
   function syncReferralCard(program) {
@@ -499,7 +497,7 @@
       }
       referralCountBadge.textContent = `${count} ${word}`;
     }
-    syncPromoRows(program);
+    syncPromoRows();
     loadReferralPurchases();
   }
 
@@ -546,7 +544,7 @@
       syncReferralCard(referralProgram);
     } catch {
       referralProgram = urlRef ? { discount_available: true, prefill_code: urlRef.trim().toUpperCase() } : null;
-      syncPromoRows(referralProgram);
+      syncPromoRows();
     }
   }
 
@@ -885,6 +883,11 @@
     loadDashboardStats();
     loadTelegramStatus();
     loadReferralProgram();
+    requestAnimationFrame(() => {
+      document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
+        window.ICS?.syncBillingToggle?.(toggle);
+      });
+    });
   }
 
   function warmUpBackend() {
@@ -2140,17 +2143,4 @@
   }
 
   initPlansPanels();
-
-  function initReferralPromo() {
-    const pairs = [
-      [overviewPromoInput, overviewPromoHint],
-      [settingsPromoInput, settingsPromoHint],
-    ];
-    pairs.forEach(([input, hint]) => {
-      input?.addEventListener("change", () => previewPromoCode(input, hint));
-      input?.addEventListener("blur", () => previewPromoCode(input, hint));
-    });
-  }
-
-  initReferralPromo();
 })();

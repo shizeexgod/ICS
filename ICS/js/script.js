@@ -236,21 +236,34 @@ counters.forEach((el) => counterIO.observe(el));
     requestAnimationFrame(tick);
   }
 
+  function syncPriceBoxState(box, period) {
+    if (!box.querySelector("[data-price-period]")) return;
+    box.classList.add("plan-card__price--switchable");
+    box.querySelectorAll("[data-price-period]").forEach((layer) => {
+      const active = layer.dataset.pricePeriod === period;
+      layer.hidden = false;
+      layer.removeAttribute("hidden");
+      layer.classList.remove("is-leaving", "is-entering");
+      layer.classList.toggle("is-visible", active);
+      layer.toggleAttribute("aria-hidden", !active);
+    });
+  }
+
   function preparePriceBoxes(panel) {
     const period = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
     panel?.querySelectorAll(".plan-card__price").forEach((box) => {
-      if (box.dataset.priceReady) return;
+      syncPriceBoxState(box, period);
       box.dataset.priceReady = "1";
-      box.classList.add("plan-card__price--switchable");
-      box.querySelectorAll("[data-price-period]").forEach((layer) => {
-        const active = layer.dataset.pricePeriod === period;
-        layer.hidden = false;
-        layer.removeAttribute("hidden");
-        layer.classList.remove("is-leaving", "is-entering");
-        layer.classList.toggle("is-visible", active);
-        layer.toggleAttribute("aria-hidden", !active);
-      });
     });
+  }
+
+  function syncToggleThumb(toggle) {
+    const thumb = toggle?.querySelector(".plans-toggle__thumb");
+    const activeBtn = toggle?.querySelector("button.is-active");
+    if (!thumb || !activeBtn || !toggle) return;
+    const pad = 3;
+    thumb.style.width = `${activeBtn.offsetWidth}px`;
+    thumb.style.transform = `translateX(${activeBtn.offsetLeft - pad}px)`;
   }
 
   function switchPanelPeriod(panel, period) {
@@ -262,18 +275,9 @@ counters.forEach((el) => counterIO.observe(el));
     toggle.querySelectorAll("button[data-period-btn]").forEach((btn) => {
       btn.classList.toggle("is-active", btn.dataset.periodBtn === period);
     });
+    syncToggleThumb(toggle);
 
     preparePriceBoxes(panel);
-
-    // Добавляем анимацию "пульсации" на карточки
-    panel.querySelectorAll(".plan-card").forEach((card) => {
-      card.style.transform = "scale(0.98)";
-      card.style.opacity = "0.7";
-      setTimeout(() => {
-        card.style.transform = "";
-        card.style.opacity = "";
-      }, 50);
-    });
 
     panel.querySelectorAll(".plan-card__price--switchable").forEach((box) => {
       const animId = String(Number(box.dataset.priceAnimId || 0) + 1);
@@ -283,40 +287,33 @@ counters.forEach((el) => counterIO.observe(el));
       const incoming = box.querySelector(`[data-price-period="${period}"]`);
       if (!incoming || outgoing === incoming) return;
 
-      incoming.hidden = false;
-      incoming.removeAttribute("hidden");
-      incoming.removeAttribute("aria-hidden");
-      incoming.classList.remove("is-leaving");
-      incoming.classList.add("is-entering");
+      const outStrong = outgoing?.querySelector("strong");
+      const inStrong = incoming.querySelector("strong");
+      const fromVal = parseRub(outStrong?.textContent);
+      const toVal = parseRub(inStrong?.textContent);
 
       if (outgoing) {
-        outgoing.classList.remove("is-entering");
+        outgoing.classList.remove("is-visible", "is-entering");
         outgoing.classList.add("is-leaving");
       }
 
+      incoming.classList.remove("is-leaving");
+      incoming.classList.add("is-entering");
+      incoming.removeAttribute("aria-hidden");
+      if (inStrong) inStrong.textContent = formatRub(fromVal || toVal);
+
       requestAnimationFrame(() => {
         if (box.dataset.priceAnimId !== animId) return;
-        incoming.classList.add("is-visible");
         incoming.classList.remove("is-entering");
-        const outStrong = outgoing?.querySelector("strong");
-        const inStrong = incoming.querySelector("strong");
-        if (outStrong && inStrong) {
-          const fromVal = parseRub(outStrong.textContent);
-          const toVal = parseRub(inStrong.textContent);
-          inStrong.textContent = formatRub(fromVal);
+        incoming.classList.add("is-visible");
+        if (inStrong && fromVal !== toVal) {
           animatePriceStrong(inStrong, formatRub(toVal));
         }
       });
 
       window.setTimeout(() => {
         if (box.dataset.priceAnimId !== animId) return;
-        if (outgoing) {
-          outgoing.classList.remove("is-visible", "is-leaving");
-          outgoing.setAttribute("aria-hidden", "true");
-        }
-        incoming.classList.add("is-visible");
-        incoming.classList.remove("is-entering");
-        incoming.removeAttribute("aria-hidden");
+        syncPriceBoxState(box, period);
       }, PRICE_ANIM_MS);
     });
   }
@@ -326,6 +323,7 @@ counters.forEach((el) => counterIO.observe(el));
   document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
     if (toggle.dataset.toggleBound) return;
     toggle.dataset.toggleBound = "1";
+    syncToggleThumb(toggle);
 
     toggle.addEventListener("click", (event) => {
       const btn = event.target.closest("button[data-period-btn]");
@@ -335,6 +333,11 @@ counters.forEach((el) => counterIO.observe(el));
     });
   });
 
+  window.addEventListener("resize", () => {
+    document.querySelectorAll("[data-billing-toggle]").forEach(syncToggleThumb);
+  });
+
   window.ICS = window.ICS || {};
   window.ICS.switchBillingPeriod = switchPanelPeriod;
+  window.ICS.syncBillingToggle = syncToggleThumb;
 })();
