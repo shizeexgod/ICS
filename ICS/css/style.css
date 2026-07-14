@@ -1948,6 +1948,10 @@ body.cabinet-open .footer {
   padding: 20px;
 }
 
+.payment-modal[hidden] {
+  display: none;
+}
+
 .payment-modal__overlay {
   position: absolute;
   inset: 0;
@@ -1972,23 +1976,26 @@ body.cabinet-open .footer {
   position: absolute;
   top: 16px;
   right: 16px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: rgba(var(--text-rgb), 0.1);
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: rgba(var(--text-rgb), 0.08);
   color: var(--text-dim);
-  border-radius: 8px;
-  font-size: 18px;
+  border-radius: 50%;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .payment-modal__close:hover {
   background: rgba(var(--text-rgb), 0.15);
   color: var(--text);
+  border-color: var(--text-dim);
+  transform: scale(1.05);
 }
 
 .payment-modal__title {
