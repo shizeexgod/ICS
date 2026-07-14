@@ -247,6 +247,14 @@
   }
 
   const PLAN_LABEL = { trial: "Trial", pro: "Pro", max: "Max" };
+  const PERIOD_LABEL = { monthly: "1 месяц", semiannual: "6 месяцев", annual: "1 год" };
+  const PLAN_PRICING = {
+    pro: { monthly: 1290, semiannual: 6570, annual: 10900 },
+    max: { monthly: 2490, semiannual: 12690, annual: 20900 },
+  };
+
+  let pendingPaymentPlan = null;
+  let pendingPaymentPeriod = null;
 
   function formatPlanDate(iso) {
     if (!iso) return "";
@@ -334,21 +342,133 @@
     const panel = btn?.closest("[data-plans-panel]");
     const billingPeriod = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
     const promoInput = panel?.querySelector(".cabinet-promo input") || overviewPromoInput || settingsPromoInput;
-    const referralCodeValue = promoInput?.value.trim().toUpperCase() || null;
-    setButtonLoading(btn, true, "Переход к оплате…");
-    const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
+    
+    pendingPaymentPlan = plan;
+    pendingPaymentPeriod = billingPeriod;
+    
+    showPaymentModal(plan, billingPeriod, promoInput?.value.trim().toUpperCase() || "");
+  }
+
+  function showPaymentModal(plan, period, promoCode) {
+    const modal = document.getElementById("paymentModal");
+    const planEl = document.getElementById("paymentPlan");
+    const periodEl = document.getElementById("paymentPeriod");
+    const emailEl = document.getElementById("paymentEmail");
+    const amountEl = document.getElementById("paymentAmount");
+    const promoInputEl = document.getElementById("paymentPromoInput");
+    const promoHintEl = document.getElementById("paymentPromoHint");
+    
+    if (!modal) return;
+    
+    const user = getStoredUser();
+    planEl.textContent = PLAN_LABEL[plan] || plan;
+    periodEl.textContent = PERIOD_LABEL[period] || period;
+    emailEl.textContent = user?.email || "—";
+    
+    const baseAmount = PLAN_PRICING[plan]?.[period] || 0;
+    amountEl.textContent = `${baseAmount.toLocaleString("ru-RU")} ₽`;
+    amountEl.dataset.baseAmount = baseAmount;
+    
+    if (promoInputEl) {
+      promoInputEl.value = promoCode;
+      promoInputEl.oninput = () => {
+        const code = promoInputEl.value.trim().toUpperCase();
+        if (code) {
+          previewModalPromo(code, plan, period, amountEl, promoHintEl);
+        } else {
+          const base = parseInt(amountEl.dataset.baseAmount) || baseAmount;
+          amountEl.textContent = `${base.toLocaleString("ru-RU")} ₽`;
+          promoHintEl.hidden = true;
+        }
+      };
+    }
+    
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    
+    if (promoCode) {
+      previewModalPromo(promoCode, plan, period, amountEl, promoHintEl);
+    }
+  }
+
+  async function previewModalPromo(code, plan, period, amountEl, hintEl) {
+    if (!code) {
+      hintEl.hidden = true;
+      return;
+    }
+    
     try {
-      const body = { return_url: returnUrl, plan, billing_period: billingPeriod };
+      const data = await apiFetch("/api/v1/billing/validate-referral", {
+        method: "POST",
+        body: JSON.stringify({ referral_code: code, plan, billing_period: period }),
+      });
+      
+      if (data.discount_rub > 0) {
+        amountEl.textContent = `${data.final_amount_rub.toLocaleString("ru-RU")} ₽`;
+        hintEl.textContent = `Промокод применён! Скидка: ${data.discount_rub.toLocaleString("ru-RU")} ₽`;
+        hintEl.hidden = false;
+        hintEl.style.color = "";
+      } else {
+        hintEl.hidden = true;
+      }
+    } catch (err) {
+      hintEl.textContent = formatApiError(err.message);
+      hintEl.hidden = false;
+      hintEl.style.color = "var(--error, #ff6b6b)";
+    }
+  }
+
+  function closePaymentModal() {
+    const modal = document.getElementById("paymentModal");
+    if (modal) {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+    }
+  }
+
+  async function confirmPaymentModal() {
+    const confirmBtn = document.getElementById("paymentModalConfirm");
+    const promoInput = document.getElementById("paymentPromoInput");
+    
+    if (!pendingPaymentPlan || !pendingPaymentPeriod) return;
+    
+    setButtonLoading(confirmBtn, true, "Переход к оплате…");
+    const returnUrl = `${window.location.origin}${window.location.pathname}?billing=success`;
+    const referralCodeValue = promoInput?.value.trim().toUpperCase() || null;
+    
+    try {
+      const body = { 
+        return_url: returnUrl, 
+        plan: pendingPaymentPlan, 
+        billing_period: pendingPaymentPeriod 
+      };
       if (referralCodeValue) body.referral_code = referralCodeValue;
+      
       const data = await apiFetch("/api/v1/billing/create-payment", {
         method: "POST",
         body: JSON.stringify(body),
       });
+      
       window.location.href = data.confirmation_url;
     } catch (err) {
       alert(err.message);
-      setButtonLoading(btn, false);
+      setButtonLoading(confirmBtn, false);
     }
+  }
+
+  // Payment modal event listeners
+  const paymentModalClose = document.getElementById("paymentModalClose");
+  const paymentModalCancel = document.getElementById("paymentModalCancel");
+  const paymentModalConfirm = document.getElementById("paymentModalConfirm");
+  
+  if (paymentModalClose) paymentModalClose.addEventListener("click", closePaymentModal);
+  if (paymentModalCancel) paymentModalCancel.addEventListener("click", closePaymentModal);
+  if (paymentModalConfirm) paymentModalConfirm.addEventListener("click", confirmPaymentModal);
+  
+  const paymentModal = document.getElementById("paymentModal");
+  if (paymentModal) {
+    const overlay = paymentModal.querySelector(".payment-modal__overlay");
+    if (overlay) overlay.addEventListener("click", closePaymentModal);
   }
 
   function syncPromoRows(program) {
@@ -380,6 +500,41 @@
       referralCountBadge.textContent = `${count} ${word}`;
     }
     syncPromoRows(program);
+    loadReferralPurchases();
+  }
+
+  async function loadReferralPurchases() {
+    const purchasesContainer = document.getElementById("referralPurchases");
+    const purchasesList = document.getElementById("referralPurchasesList");
+    if (!purchasesContainer || !purchasesList) return;
+
+    try {
+      const data = await apiFetch("/api/v1/billing/referral-purchases");
+      if (!data || !data.purchases || data.purchases.length === 0) {
+        purchasesContainer.hidden = true;
+        return;
+      }
+
+      purchasesContainer.hidden = false;
+      purchasesList.innerHTML = "";
+
+      data.purchases.forEach((purchase) => {
+        const item = document.createElement("div");
+        item.className = "cabinet-referral__purchase";
+        const date = new Date(purchase.created_at).toLocaleDateString("ru-RU");
+        item.innerHTML = `
+          <div class="cabinet-referral__purchase-info">
+            <span class="cabinet-referral__purchase-name">${purchase.company_name || "Компания"}</span>
+            <span class="cabinet-referral__purchase-meta">ID: ${purchase.company_id} · ${date}</span>
+          </div>
+          <span class="cabinet-referral__purchase-amount">+${purchase.reward_rub.toLocaleString("ru-RU")} ₽</span>
+        `;
+        purchasesList.appendChild(item);
+      });
+    } catch (err) {
+      console.error("Failed to load referral purchases:", err);
+      purchasesContainer.hidden = true;
+    }
   }
 
   async function loadReferralProgram() {
@@ -1468,7 +1623,14 @@
   });
   // Scroll events don't bubble, so listen on the capture phase to catch
   // scrolling inside .cabinet-app__view and close any open panel.
-  document.addEventListener("scroll", () => closeAllFieldPickers(), true);
+  // EXCEPT: do not close time/date pickers when scrolling inside them
+  document.addEventListener("scroll", (e) => {
+    const scrolledEl = e.target;
+    const isInsidePicker = scrolledEl?.closest?.(".calendar-time-panel");
+    if (!isInsidePicker) {
+      closeAllFieldPickers();
+    }
+  }, true);
 
   let bookingsLoadSeq = 0;
   const ACTIVE_BOOKING_STATUSES = new Set(["pending", "confirmed"]);

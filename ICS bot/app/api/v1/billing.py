@@ -178,6 +178,42 @@ async def get_referral_program(
     )
 
 
+@router.get("/referral-purchases")
+async def get_referral_purchases(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> dict:
+    """Return list of purchases made using this company's referral code."""
+    result = await session.execute(
+        select(CompanyPayment)
+        .join(Company, CompanyPayment.company_id == Company.id)
+        .where(
+            CompanyPayment.referral_code == company.referral_code,
+            CompanyPayment.status == "succeeded",
+            CompanyPayment.referrer_reward_rub > 0,
+        )
+        .order_by(CompanyPayment.created_at.desc())
+        .limit(50)
+    )
+    payments = result.scalars().all()
+    
+    purchases = []
+    for payment in payments:
+        buyer_result = await session.execute(
+            select(Company).where(Company.id == payment.company_id)
+        )
+        buyer = buyer_result.scalar_one_or_none()
+        if buyer:
+            purchases.append({
+                "company_id": str(buyer.id),
+                "company_name": buyer.name,
+                "reward_rub": payment.referrer_reward_rub,
+                "created_at": payment.created_at.isoformat(),
+            })
+    
+    return {"purchases": purchases}
+
+
 @router.post("/webhook")
 async def yookassa_webhook(
     request: Request,

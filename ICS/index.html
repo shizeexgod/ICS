@@ -670,7 +670,7 @@
                     <li>— все функции Trial</li>
                     <li>— до 5 сотрудников</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeProBtnOverview" data-plan-cta="pro" hidden>Оплатить Pro</button>
+                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeProBtnOverview" data-plan-cta="pro" hidden>Оплатить</button>
                 </article>
 
                 <article class="plan-card plan-card--max" data-plan="max">
@@ -689,7 +689,7 @@
                     <li>— неограниченное число сотрудников</li>
                     <li>— приоритетная поддержка</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeMaxBtnOverview" data-plan-cta="max" hidden>Оплатить Max</button>
+                  <button type="button" class="btn btn--primary plan-card__cta" id="upgradeMaxBtnOverview" data-plan-cta="max" hidden>Оплатить</button>
                 </article>
               </div>
             </div>
@@ -874,7 +874,7 @@
                     <li>— безлимитные напоминания</li>
                     <li>— до 5 сотрудников</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="pro" hidden>Оплатить Pro</button>
+                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="pro" hidden>Оплатить</button>
                 </article>
                 <article class="plan-card plan-card--max" data-plan="max">
                   <div class="plan-card__head">
@@ -891,7 +891,7 @@
                     <li>— всё из Pro</li>
                     <li>— неограниченные сотрудники</li>
                   </ul>
-                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="max" hidden>Оплатить Max</button>
+                  <button type="button" class="btn btn--primary plan-card__cta settings-upgrade-btn" data-plan-cta="max" hidden>Оплатить</button>
                 </article>
               </div>
             </div>
@@ -914,6 +914,10 @@
                   <span class="cabinet-referral__stat-label">Баланс</span>
                   <strong class="cabinet-referral__balance" id="referralBalance">0 ₽</strong>
                 </div>
+              </div>
+              <div class="cabinet-referral__purchases" id="referralPurchases" hidden>
+                <h4 class="cabinet-referral__purchases-title">История покупок</h4>
+                <div class="cabinet-referral__purchases-list" id="referralPurchasesList"></div>
               </div>
             </article>
 
@@ -1051,6 +1055,49 @@
 </script>
 <script src="js/legal-config.js"></script>
 <script src="js/legal-page.js"></script>
+
+<!-- Payment Confirmation Modal -->
+<div class="payment-modal" id="paymentModal" hidden role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+  <div class="payment-modal__overlay"></div>
+  <div class="payment-modal__content">
+    <button type="button" class="payment-modal__close" id="paymentModalClose" aria-label="Закрыть">✕</button>
+    <h2 id="paymentModalTitle" class="payment-modal__title">Подтверждение оплаты</h2>
+    
+    <div class="payment-modal__info">
+      <div class="payment-modal__row">
+        <span class="payment-modal__label">Тариф</span>
+        <span class="payment-modal__value" id="paymentPlan">Pro</span>
+      </div>
+      <div class="payment-modal__row">
+        <span class="payment-modal__label">Период</span>
+        <span class="payment-modal__value" id="paymentPeriod">1 месяц</span>
+      </div>
+      <div class="payment-modal__row">
+        <span class="payment-modal__label">Email для чека</span>
+        <span class="payment-modal__value" id="paymentEmail">—</span>
+      </div>
+      
+      <div class="payment-modal__promo" id="paymentPromoSection">
+        <label class="cabinet__field">
+          <span>Промокод <em class="cabinet__optional">скидка 10%</em></span>
+          <input type="text" id="paymentPromoInput" placeholder="ABC12345" autocomplete="off" spellcheck="false" maxlength="16">
+        </label>
+        <p class="payment-modal__promo-hint" id="paymentPromoHint" hidden></p>
+      </div>
+      
+      <div class="payment-modal__total">
+        <span class="payment-modal__total-label">Итого к оплате</span>
+        <span class="payment-modal__total-value" id="paymentAmount">1 290 ₽</span>
+      </div>
+    </div>
+    
+    <div class="payment-modal__actions">
+      <button type="button" class="btn btn--ghost" id="paymentModalCancel">Отмена</button>
+      <button type="button" class="btn btn--primary" id="paymentModalConfirm">Оплатить</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/script.js"></script>
 <script src="js/cabinet.js"></script>
 </body>

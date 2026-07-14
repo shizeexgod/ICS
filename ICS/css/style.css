@@ -1883,6 +1883,209 @@ body.cabinet-open .footer {
   white-space: nowrap;
 }
 
+.cabinet-referral__purchases {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.cabinet-referral__purchases-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--text-dim);
+}
+
+.cabinet-referral__purchases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cabinet-referral__purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(var(--surface-rgb), 0.4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.cabinet-referral__purchase-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cabinet-referral__purchase-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cabinet-referral__purchase-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.cabinet-referral__purchase-amount {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #7ee787;
+}
+
+/* ============ Payment Confirmation Modal ============ */
+.payment-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.payment-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 16, 31, 0.85);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+
+.payment-modal__content {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.payment-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(var(--text-rgb), 0.1);
+  color: var(--text-dim);
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-modal__close:hover {
+  background: rgba(var(--text-rgb), 0.15);
+  color: var(--text);
+}
+
+.payment-modal__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 20px;
+  color: var(--text);
+}
+
+.payment-modal__info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payment-modal__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.payment-modal__label {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.payment-modal__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.payment-modal__promo {
+  margin-top: 8px;
+}
+
+.payment-modal__promo-hint {
+  font-size: 13px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 8px;
+  color: var(--accent);
+}
+
+.payment-modal__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 0;
+  margin-top: 8px;
+  border-top: 2px solid var(--border);
+}
+
+.payment-modal__total-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.payment-modal__total-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.payment-modal__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.payment-modal__actions .btn {
+  flex: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 700px) {
   .cabinet-referral__stats {
     grid-template-columns: 1fr;
@@ -2689,7 +2892,7 @@ body.cabinet-open .footer {
   font-size: 13px;
   font-weight: 700;
   padding: 9px 16px;
-  border-radius: 9px;
+  border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2721,7 +2924,7 @@ body.cabinet-open .footer {
   bottom: 4px;
   left: 4px;
   width: calc(33.333% - 4px);
-  border-radius: 9px;
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.4);
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2974,6 +3177,9 @@ body.cabinet-open .footer {
   width: 100%;
   max-width: 100%;
   margin-top: 14px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
   justify-content: center;
   box-sizing: border-box;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
