@@ -735,9 +735,7 @@
   function warmUpBackend() {
     const base = apiBase();
     if (!base) return;
-    // Не ждём ответа и игнорируем ошибку — просто заранее «будим» бэкенд,
-    // пока пользователь читает форму, чтобы первый реальный запрос не упал.
-    fetch(`${base}/docs`, { method: "GET" }).catch(() => {});
+    fetch(`${base}/health`, { method: "GET" }).catch(() => {});
   }
 
   async function openCabinet() {
@@ -806,13 +804,14 @@
     const url = `${base}${path}`;
     let res;
     let lastErr;
-    // До 3 попыток — бэкенд на Amvera иногда «просыпается» после простоя,
-    // и первый/второй запрос может упасть по сети раньше, чем контейнер поднимется.
-    const delays = [0, 1200, 2500];
+    const delays = [0, 1500, 3000, 4500];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       if (delays[attempt]) await sleep(delays[attempt]);
       try {
-        res = await fetchWithTimeout(url, { ...options, headers }, 20000);
+        if (attempt > 0) {
+          await fetchWithTimeout(`${base}/health`, { method: "GET" }, 12000).catch(() => {});
+        }
+        res = await fetchWithTimeout(url, { ...options, headers }, 25000);
         lastErr = null;
         break;
       } catch (err) {
@@ -821,7 +820,7 @@
     }
     if (lastErr) {
       throw new Error(
-        "Не удалось подключиться к серверу. Проверьте ICS_API_BASE и CORS_ORIGINS на бэкенде."
+        `Не удалось подключиться к ${base}. Проверьте, что бэкенд на Amvera запущен, и в CORS_ORIGINS указан ${window.location.origin}.`
       );
     }
 
@@ -883,6 +882,7 @@
   });
 
   choiceLoginBtn.addEventListener("click", () => {
+    warmUpBackend();
     showError(loginError, "");
     loginForm.reset();
     showStep(stepLogin);

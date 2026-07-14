@@ -125,20 +125,31 @@ const Settings = (() => {
 
 /* ============ Scroll progress bar ============ */
 const progressBar = document.getElementById("scrollProgress");
+const header = document.querySelector(".header");
+const bgGlows = document.querySelectorAll(".bg-glow");
+
 function updateProgress() {
   const scrollTop = window.scrollY;
   const docHeight = document.documentElement.scrollHeight - window.innerHeight;
   const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-  progressBar.style.width = pct + "%";
+  if (progressBar) progressBar.style.width = `${pct}%`;
+  if (header) header.classList.toggle("is-scrolled", scrollTop > 24);
+  bgGlows.forEach((glow, index) => {
+    const shift = scrollTop * (index === 0 ? 0.04 : -0.03);
+    glow.style.transform = `translate3d(0, ${shift}px, 0)`;
+  });
 }
 document.addEventListener("scroll", updateProgress, { passive: true });
 updateProgress();
 
 /* ============ Reveal on scroll (staggered via CSS --i) ============ */
 const revealItems = document.querySelectorAll(
-  ".card, .channel, .why, .steps li, .about__points li, .stat"
+  ".card, .channel, .why, .steps li, .about__points li, .stat, .plan-card, .hero__badge, .hero__title, .hero__desc, .hero__cta, .hero__frame, .cta__box, .footer__col, .section__head"
 );
 revealItems.forEach((el) => el.classList.add("reveal"));
+
+const sectionBlocks = document.querySelectorAll(".section, .cta, .footer__grid");
+sectionBlocks.forEach((el) => el.classList.add("reveal-section"));
 
 const io = new IntersectionObserver(
   (entries) => {
@@ -149,9 +160,10 @@ const io = new IntersectionObserver(
       }
     });
   },
-  { threshold: 0.15 }
+  { threshold: 0.12, rootMargin: "0px 0px -6% 0px" }
 );
 revealItems.forEach((el) => io.observe(el));
+sectionBlocks.forEach((el) => io.observe(el));
 
 /* ============ Animated stat counters ============ */
 function animateCount(el) {
