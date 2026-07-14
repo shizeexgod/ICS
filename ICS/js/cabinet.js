@@ -14,6 +14,7 @@
     settings: { eyebrow: "Настройки", title: "Настройки и подписка" },
     telegram: { eyebrow: "Интеграции", title: "Telegram" },
     templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
+    community: { eyebrow: "ICS в сети", title: "Сообщество" },
   };
 
   const STAFF_BACKEND_HINT =
