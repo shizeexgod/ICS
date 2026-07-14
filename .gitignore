@@ -24,6 +24,7 @@ build/
 .vscode/
 .idea/
 .cursor/
+.claude/
 *.log
 desktop.ini
 thumbs.db
