@@ -11,9 +11,10 @@ window.ICS_LEGAL = {
   phoneDisplay: "+7 964 370-48-71",
   telegramUrl: "https://t.me/icsnotify",
   telegramHandle: "@icsnotify",
-  telegramChannelUrl: "https://t.me/+xHCNGEmgELMxZTIy",
+  telegramChannelUrl: "https://t.me/icsnotify_public",
   telegramBotUrl: "https://t.me/ICSnotify00_bot",
   maxBizUrl: "https://max.ru/se13527747_biz",
+  maxBotUrl: "https://max.ru/se13527747_bot",
   serviceName: "ICS",
   serviceDescription:
     "Сервис автоматических напоминаний о записи для бизнеса (Telegram, WhatsApp, MAX).",
