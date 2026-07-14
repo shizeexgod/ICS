@@ -7,6 +7,16 @@ from functools import lru_cache
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Frontend origins that must always be allowed (merged with CORS_ORIGINS on Amvera).
+BUILTIN_CORS_ORIGINS: tuple[str, ...] = (
+    "https://ics-system.vercel.app",
+    "https://www.icsnotify.online",
+    "https://icsnotify.online",
+    "http://localhost:8765",
+    "http://127.0.0.1:8765",
+    "http://localhost:5500",
+)
+
 
 class Settings(BaseSettings):
     """Central application settings, populated from the process environment / .env file."""
@@ -121,7 +131,9 @@ class Settings(BaseSettings):
         raw = self.CORS_ORIGINS.strip()
         if not raw or raw == "*":
             return ["*"]
-        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+        origins = {origin.strip() for origin in raw.split(",") if origin.strip()}
+        origins.update(BUILTIN_CORS_ORIGINS)
+        return sorted(origins)
 
 
 @lru_cache
