@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 class CreatePaymentRequest(BaseModel):
     plan: Literal["pro", "max"]
-    billing_period: Literal["monthly", "annual"]
+    billing_period: Literal["monthly", "semiannual", "annual"]
     return_url: HttpUrl | str | None = None
     referral_code: str | None = Field(default=None, max_length=16)
 
@@ -27,7 +27,7 @@ class CreatePaymentRequest(BaseModel):
 class ValidateReferralRequest(BaseModel):
     referral_code: str = Field(..., min_length=4, max_length=16)
     plan: Literal["pro", "max"] = "pro"
-    billing_period: Literal["monthly", "annual"] = "monthly"
+    billing_period: Literal["monthly", "semiannual", "annual"] = "monthly"
 
     @field_validator("referral_code")
     @classmethod

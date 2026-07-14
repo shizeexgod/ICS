@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 _YOOKASSA_API = "https://api.yookassa.ru/v3/payments"
 
-_PERIOD_LABEL = {"monthly": "30 дней", "annual": "1 год"}
+_PERIOD_LABEL = {"monthly": "30 дней", "semiannual": "6 месяцев", "annual": "1 год"}
 
 
 def yookassa_configured() -> bool:
@@ -37,7 +37,7 @@ async def create_plan_payment(
     *,
     company: Company,
     plan: Literal["pro", "max"],
-    billing_period: Literal["monthly", "annual"],
+    billing_period: Literal["monthly", "semiannual", "annual"],
     return_url: str,
     referral_code: str | None = None,
 ) -> tuple[str, str, int]:
@@ -140,7 +140,7 @@ async def process_successful_payment(
     # payment was created. Fall back to pro/monthly only if that row is
     # somehow missing (should not happen in normal flow).
     plan: Literal["pro", "max"] = payment_row.plan if payment_row is not None else "pro"  # type: ignore[assignment]
-    billing_period: Literal["monthly", "annual"] = (
+    billing_period: Literal["monthly", "semiannual", "annual"] = (
         payment_row.billing_period if payment_row is not None else "monthly"  # type: ignore[assignment]
     )
 

@@ -199,3 +199,142 @@ const counterIO = new IntersectionObserver(
   { threshold: 0.4 }
 );
 counters.forEach((el) => counterIO.observe(el));
+
+/* ============ Billing period toggle + animated prices ============ */
+(function initBillingPeriodToggles() {
+  const PRICE_ANIM_MS = 500;
+
+  function parseRub(text) {
+    return parseInt(String(text || "").replace(/\D/g, ""), 10) || 0;
+  }
+
+  function formatRub(value) {
+    return `${value.toLocaleString("ru-RU")} ₽`;
+  }
+
+  function animatePriceStrong(el, target) {
+    const from = parseRub(el.textContent);
+    const to = parseRub(typeof target === "string" ? target : target.textContent);
+    if (from === to) return;
+
+    const targetText = typeof target === "string" ? target : target.textContent;
+    const start = performance.now();
+    const duration = 600;
+
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(from + (to - from) * eased);
+      el.textContent = formatRub(current);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        el.textContent = targetText;
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  function preparePriceBoxes(panel) {
+    const period = panel?.querySelector("[data-billing-toggle]")?.dataset.period || "monthly";
+    panel?.querySelectorAll(".plan-card__price").forEach((box) => {
+      if (box.dataset.priceReady) return;
+      box.dataset.priceReady = "1";
+      box.classList.add("plan-card__price--switchable");
+      box.querySelectorAll("[data-price-period]").forEach((layer) => {
+        const active = layer.dataset.pricePeriod === period;
+        layer.hidden = false;
+        layer.removeAttribute("hidden");
+        layer.classList.remove("is-leaving", "is-entering");
+        layer.classList.toggle("is-visible", active);
+        layer.toggleAttribute("aria-hidden", !active);
+      });
+    });
+  }
+
+  function switchPanelPeriod(panel, period) {
+    if (!panel) return;
+    const toggle = panel.querySelector("[data-billing-toggle]");
+    if (!toggle || toggle.dataset.period === period) return;
+
+    toggle.dataset.period = period;
+    toggle.querySelectorAll("button[data-period-btn]").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.periodBtn === period);
+    });
+
+    preparePriceBoxes(panel);
+
+    // Добавляем анимацию "пульсации" на карточки
+    panel.querySelectorAll(".plan-card").forEach((card) => {
+      card.style.transform = "scale(0.98)";
+      card.style.opacity = "0.7";
+      setTimeout(() => {
+        card.style.transform = "";
+        card.style.opacity = "";
+      }, 50);
+    });
+
+    panel.querySelectorAll(".plan-card__price--switchable").forEach((box) => {
+      const animId = String(Number(box.dataset.priceAnimId || 0) + 1);
+      box.dataset.priceAnimId = animId;
+
+      const outgoing = box.querySelector("[data-price-period].is-visible");
+      const incoming = box.querySelector(`[data-price-period="${period}"]`);
+      if (!incoming || outgoing === incoming) return;
+
+      incoming.hidden = false;
+      incoming.removeAttribute("hidden");
+      incoming.removeAttribute("aria-hidden");
+      incoming.classList.remove("is-leaving");
+      incoming.classList.add("is-entering");
+
+      if (outgoing) {
+        outgoing.classList.remove("is-entering");
+        outgoing.classList.add("is-leaving");
+      }
+
+      requestAnimationFrame(() => {
+        if (box.dataset.priceAnimId !== animId) return;
+        incoming.classList.add("is-visible");
+        incoming.classList.remove("is-entering");
+        const outStrong = outgoing?.querySelector("strong");
+        const inStrong = incoming.querySelector("strong");
+        if (outStrong && inStrong) {
+          const fromVal = parseRub(outStrong.textContent);
+          const toVal = parseRub(inStrong.textContent);
+          inStrong.textContent = formatRub(fromVal);
+          animatePriceStrong(inStrong, formatRub(toVal));
+        }
+      });
+
+      window.setTimeout(() => {
+        if (box.dataset.priceAnimId !== animId) return;
+        if (outgoing) {
+          outgoing.classList.remove("is-visible", "is-leaving");
+          outgoing.setAttribute("aria-hidden", "true");
+        }
+        incoming.classList.add("is-visible");
+        incoming.classList.remove("is-entering");
+        incoming.removeAttribute("aria-hidden");
+      }, PRICE_ANIM_MS);
+    });
+  }
+
+  document.querySelectorAll("[data-plans-panel]").forEach(preparePriceBoxes);
+
+  document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
+    if (toggle.dataset.toggleBound) return;
+    toggle.dataset.toggleBound = "1";
+
+    toggle.addEventListener("click", (event) => {
+      const btn = event.target.closest("button[data-period-btn]");
+      if (!btn) return;
+      const panel = toggle.closest("[data-plans-panel]");
+      switchPanelPeriod(panel, btn.dataset.periodBtn);
+    });
+  });
+
+  window.ICS = window.ICS || {};
+  window.ICS.switchBillingPeriod = switchPanelPeriod;
+})();

@@ -14,10 +14,10 @@ TRIAL_DAYS = 10
 TRIAL_REMINDER_LIMIT = 100
 
 PLAN_PRICING: dict[str, dict[str, int]] = {
-    "pro": {"monthly": 1490, "annual": 13900},
-    "max": {"monthly": 2690, "annual": 22900},
+    "pro": {"monthly": 1290, "semiannual": 6590, "annual": 10900},
+    "max": {"monthly": 2490, "semiannual": 12690, "annual": 20900},
 }
-BILLING_PERIOD_DAYS: dict[str, int] = {"monthly": 30, "annual": 365}
+BILLING_PERIOD_DAYS: dict[str, int] = {"monthly": 30, "semiannual": 182, "annual": 365}
 
 # Backward-compat default (display fallback when a company has no plan/period yet).
 PRO_PRICE_RUB = PLAN_PRICING["pro"]["monthly"]

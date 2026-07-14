@@ -103,7 +103,7 @@ async def activate_paid_plan(
     session: AsyncSession,
     company_id: uuid.UUID,
     plan: Literal["pro", "max"],
-    billing_period: Literal["monthly", "annual"],
+    billing_period: Literal["monthly", "semiannual", "annual"],
 ) -> Company:
     """Upgrade a company to Pro or Max after successful payment."""
     result = await session.execute(select(Company).where(Company.id == company_id))

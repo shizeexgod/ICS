@@ -12,6 +12,8 @@ BUILTIN_CORS_ORIGINS: tuple[str, ...] = (
     "https://ics-system.vercel.app",
     "https://www.icsnotify.online",
     "https://icsnotify.online",
+    "https://www.icsnotify.ru",
+    "https://icsnotify.ru",
     "http://localhost:8765",
     "http://127.0.0.1:8765",
     "http://localhost:5500",

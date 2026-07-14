@@ -788,6 +788,18 @@
     }
   }
 
+  function clearAuthErrors() {
+    [registerError, loginError, verifyError].forEach((el) => showError(el, ""));
+  }
+
+  let sendCodeInFlight = false;
+
+  function connectionErrorMessage() {
+    const base = apiBase() || "API";
+    const origin = window.location.origin;
+    return `Не удалось подключиться к ${base}. Проверьте, что бэкенд на Amvera запущен, и в CORS_ORIGINS указан ${origin}.`;
+  }
+
   async function apiFetch(path, options = {}) {
     const base = apiBase();
     if (!base) {
@@ -804,14 +816,14 @@
     const url = `${base}${path}`;
     let res;
     let lastErr;
-    const delays = [0, 1500, 3000, 4500];
+    const delays = [0, 2200];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       if (delays[attempt]) await sleep(delays[attempt]);
       try {
         if (attempt > 0) {
-          await fetchWithTimeout(`${base}/health`, { method: "GET" }, 12000).catch(() => {});
+          await fetchWithTimeout(`${base}/health`, { method: "GET" }, 10000).catch(() => {});
         }
-        res = await fetchWithTimeout(url, { ...options, headers }, 25000);
+        res = await fetchWithTimeout(url, { ...options, headers }, 20000);
         lastErr = null;
         break;
       } catch (err) {
@@ -819,9 +831,7 @@
       }
     }
     if (lastErr) {
-      throw new Error(
-        `Не удалось подключиться к ${base}. Проверьте, что бэкенд на Amvera запущен, и в CORS_ORIGINS указан ${window.location.origin}.`
-      );
+      throw new Error(connectionErrorMessage());
     }
 
     const data = await res.json().catch(() => ({}));
@@ -837,13 +847,15 @@
 
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    showError(registerError, "");
+    if (sendCodeInFlight) return;
+    clearAuthErrors();
     const fd = new FormData(registerForm);
     pendingName = (fd.get("name") || "").toString().trim();
     pendingEmail = (fd.get("email") || "").toString().trim().toLowerCase();
     pendingPhone = (fd.get("phone") || "").toString().trim();
     const btn = registerForm.querySelector("button[type=submit]");
     setButtonLoading(btn, true, "Отправка…");
+    sendCodeInFlight = true;
 
     try {
       const payload = { email: pendingEmail, name: pendingName };
@@ -870,13 +882,14 @@
       const msg = formatApiError(err.message);
       if (msg.includes("уже зарегистрирован")) {
         loginForm.querySelector('input[name="email"]').value = pendingEmail;
-        showError(registerError, "");
+        clearAuthErrors();
         showError(loginError, msg);
         showStep(stepLogin);
         return;
       }
       showError(registerError, msg);
     } finally {
+      sendCodeInFlight = false;
       setButtonLoading(btn, false);
     }
   });
@@ -899,13 +912,15 @@
 
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    showError(loginError, "");
+    if (sendCodeInFlight) return;
+    clearAuthErrors();
     const fd = new FormData(loginForm);
     pendingName = "";
     pendingEmail = (fd.get("email") || "").toString().trim().toLowerCase();
     pendingPhone = "";
     const btn = loginForm.querySelector("button[type=submit]");
     setButtonLoading(btn, true, "Отправка…");
+    sendCodeInFlight = true;
 
     try {
       const data = await apiFetch("/api/v1/auth/send-code", {
@@ -928,6 +943,7 @@
     } catch (err) {
       showError(loginError, formatApiError(err.message));
     } finally {
+      sendCodeInFlight = false;
       setButtonLoading(btn, false);
     }
   });
@@ -1891,24 +1907,6 @@
     });
   });
 
-  function initBillingToggles() {
-    document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
-      if (toggle.dataset.toggleBound) return;
-      toggle.dataset.toggleBound = "1";
-      toggle.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-period-btn]");
-        if (!btn) return;
-        const period = btn.dataset.periodBtn;
-        toggle.dataset.period = period;
-        toggle.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
-        const panel = toggle.closest("[data-plans-panel]");
-        panel?.querySelectorAll("[data-price-period]").forEach((el) => {
-          el.hidden = el.dataset.pricePeriod !== period;
-        });
-      });
-    });
-  }
-
   function initPlansPanels() {
     document.querySelectorAll(".plans-panel__frame").forEach((frame) => {
       if (frame.dataset.plansBound) return;
@@ -1980,7 +1978,6 @@
   }
 
   initPlansPanels();
-  initBillingToggles();
 
   function initReferralPromo() {
     const pairs = [

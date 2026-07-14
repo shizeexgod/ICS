@@ -2663,19 +2663,20 @@ body.cabinet-open .footer {
     0 0 28px color-mix(in srgb, var(--max) 12%, transparent);
 }
 
-/* ---- Billing period toggle (Помесячно / Год) ---- */
+/* ---- Billing period toggle (1 месяц / 6 месяцев / 1 год) ---- */
 .plans-toggle-row {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 .plans-toggle {
   position: relative;
   display: inline-flex;
-  padding: 3px;
-  border-radius: 999px;
+  padding: 4px;
+  border-radius: 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .plans-toggle button {
   position: relative;
@@ -2684,36 +2685,52 @@ body.cabinet-open .footer {
   border: none;
   background: transparent;
   color: var(--text-dim);
-  font-family: var(--font);
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 700;
-  padding: 7px 13px;
-  border-radius: 999px;
+  padding: 9px 16px;
+  border-radius: 9px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+}
+.plans-toggle button:hover {
+  color: var(--text);
 }
 .plans-toggle button em {
   font-style: normal;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   color: #7ee787;
+  transition: color 0.3s ease, opacity 0.3s ease;
 }
-.plans-toggle button.is-active { color: #06101f; }
-.plans-toggle button.is-active em { color: #06101f; opacity: 0.75; }
+.plans-toggle button.is-active { 
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.plans-toggle button.is-active em { 
+  color: #ffffff; 
+  opacity: 0.9; 
+}
 .plans-toggle__thumb {
   position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  border-radius: 999px;
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(33.333% - 4px);
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.4);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.plans-toggle[data-period="semiannual"] .plans-toggle__thumb {
+  transform: translateX(calc(100% + 4px));
 }
 .plans-toggle[data-period="annual"] .plans-toggle__thumb {
-  transform: translateX(100%);
+  transform: translateX(calc(200% + 8px));
 }
 
 .plan-card {
@@ -2727,7 +2744,8 @@ body.cabinet-open .footer {
     border-color 0.25s ease,
     box-shadow 0.25s ease,
     background 0.25s ease,
-    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.4s ease;
 }
 
 .plan-card--max { border-color: color-mix(in srgb, var(--max) 30%, var(--border)); }
@@ -2876,10 +2894,57 @@ body.cabinet-open .footer {
   line-height: 1.4;
 }
 
+.plan-card__price--switchable {
+  display: grid;
+  align-items: start;
+  min-height: 2.1em;
+}
+
+.plan-card__price--switchable [data-price-period] {
+  grid-area: 1 / 1;
+  margin: 0;
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.5s;
+  will-change: opacity, transform;
+}
+
+.plan-card__price--switchable [data-price-period]:not(.is-visible):not(.is-leaving):not(.is-entering) {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+
+.plan-card__price--switchable [data-price-period].is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.plan-card__price--switchable [data-price-period].is-leaving {
+  visibility: visible;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.plan-card__price--switchable [data-price-period].is-entering {
+  visibility: visible;
+  opacity: 0;
+  transform: translateY(14px);
+}
+
 .plan-card__price strong {
+  display: inline-block;
   color: var(--text);
-  font-size: 18px;
+  font-size: 19px;
   font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  transition: color 0.25s ease;
 }
 
 .plan-card__note {
