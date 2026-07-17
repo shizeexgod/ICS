@@ -42,6 +42,24 @@ class Settings(BaseSettings):
         description="Bot token issued by @BotFather.",
     )
 
+    # --- MAX messenger ------------------------------------------------------
+    MAX_BOT_TOKEN: str = Field(
+        default="",
+        description="Access token from MAX business bot settings (Authorization header).",
+    )
+    MAX_API_BASE: str = Field(
+        default="https://platform-api2.max.ru",
+        description="MAX Bot API base URL.",
+    )
+    MAX_WEBHOOK_SECRET: str = Field(
+        default="ics-max-webhook-secret",
+        description="Secret for X-Max-Bot-Api-Secret webhook verification (5-256 chars).",
+    )
+    PUBLIC_BASE_URL: str = Field(
+        default="https://ics-bot-shizexgod.amvera.io",
+        description="Public HTTPS base URL of this API (used to register MAX webhook).",
+    )
+
     # --- Client notification channels (WhatsApp / SMS) -----------------------
     GREEN_API_INSTANCE: str = Field(
         default="",

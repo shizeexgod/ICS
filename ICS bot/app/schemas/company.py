@@ -102,16 +102,33 @@ class CompanyTelegramOut(BaseModel):
     staff_required: bool = False
 
 
+class MaxManagerOut(BaseModel):
+    max_user_id: int
+    full_name: str | None = None
+    max_username: str | None = None
+    role: str | None = None
+
+
+class CompanyMaxOut(BaseModel):
+    connected: bool
+    managers: list[MaxManagerOut]
+    staff_required: bool = False
+    bot_url: str = "https://max.ru/se13527747_bot"
+
+
 class StaffOut(BaseModel):
     id: uuid.UUID
     full_name: str
     phone: str | None = None
     telegram_username: str | None = None
+    max_username: str | None = None
     role: str
     notify_bookings: bool
     tg_chat_id: int | None = None
+    max_user_id: int | None = None
     is_active: bool
     is_connected: bool = False
+    is_max_connected: bool = False
     created_at: datetime
 
 
@@ -119,6 +136,7 @@ class StaffCreateRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     phone: str | None = Field(default=None, max_length=32)
     telegram_username: str | None = Field(default=None, max_length=64)
+    max_username: str | None = Field(default=None, max_length=64)
     role: str = Field(default="employee", max_length=32)
     notify_bookings: bool = True
 
@@ -130,7 +148,7 @@ class StaffCreateRequest(BaseModel):
             raise ValueError("Full name must not be empty.")
         return value
 
-    @field_validator("telegram_username")
+    @field_validator("telegram_username", "max_username")
     @classmethod
     def _normalize_username(cls, value: str | None) -> str | None:
         if value is None:
@@ -151,6 +169,7 @@ class StaffUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=255)
     phone: str | None = Field(default=None, max_length=32)
     telegram_username: str | None = Field(default=None, max_length=64)
+    max_username: str | None = Field(default=None, max_length=64)
     role: str | None = Field(default=None, max_length=32)
     notify_bookings: bool | None = None
     is_active: bool | None = None
@@ -165,7 +184,7 @@ class StaffUpdateRequest(BaseModel):
             raise ValueError("Full name must not be empty.")
         return value
 
-    @field_validator("telegram_username")
+    @field_validator("telegram_username", "max_username")
     @classmethod
     def _normalize_username(cls, value: str | None) -> str | None:
         if value is None:

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.client import Client
 from app.models.company import Company
+from app.services.max_notifications import notify_company_managers_of_new_booking_max
 from app.services.scheduler import schedule_appointment_reminder
 from app.services.staff_service import normalize_phone
 from app.services.telegram_notifications import notify_company_managers_of_new_booking
@@ -92,6 +93,23 @@ async def create_company_appointment(
         except Exception:
             logger.exception(
                 "Telegram notification failed for appointment_id=%s", appointment.id
+            )
+
+        try:
+            await notify_company_managers_of_new_booking_max(
+                session,
+                company_id=company.id,
+                appointment_id=appointment.id,
+                company_name=company.name,
+                client_name=client.full_name,
+                client_phone=client.phone,
+                service_name=appointment.service_name,
+                appointment_date=appointment.appointment_date,
+                appointment_time=appointment.appointment_time,
+            )
+        except Exception:
+            logger.exception(
+                "MAX notification failed for appointment_id=%s", appointment.id
             )
 
     if schedule_reminder:

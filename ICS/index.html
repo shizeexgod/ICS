@@ -17,8 +17,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="preload" as="image" href="img/logo-telegram.png" type="image/png">
+<link rel="preload" as="image" href="img/logo-telegram.svg" type="image/svg+xml">
 <link rel="preload" as="image" href="img/logo-max.png" type="image/png">
+<link rel="preload" as="image" href="img/logo-whatsapp.svg" type="image/svg+xml">
 </head>
 <body>
 
@@ -243,7 +244,7 @@
     <div class="channels-grid">
       <a class="channel channel--link" href="https://t.me/icsnotify_public" target="_blank" rel="noopener noreferrer">
         <div class="channel__icon channel__icon--brand">
-          <img class="brand-logo" src="img/logo-telegram.png" width="56" height="56" alt="Telegram" loading="lazy" decoding="async">
+          <img class="messenger-logo messenger-logo--landing" src="img/logo-telegram.svg" width="36" height="36" alt="Telegram" loading="lazy" decoding="async">
         </div>
         <h3>Telegram</h3>
         <p>Напоминания через официальный Telegram-бот вашей компании: быстро, надёжно, с высокой открываемостью сообщений.</p>
@@ -251,8 +252,8 @@
       </a>
 
       <div class="channel">
-        <div class="channel__icon channel__icon--wa">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="currentColor" opacity="0.15"/><path d="M17.5 6.5A7.8 7.8 0 0 0 6.2 16.8L5 19l2.3-1.2A7.8 7.8 0 1 0 17.5 6.5Z" stroke="currentColor" stroke-width="1.4"/><path d="M9.3 9.6c.2-.5.4-.5.6-.5h.5c.2 0 .4 0 .5.4.2.5.6 1.5.6 1.6.1.1.1.3 0 .4-.1.2-.1.3-.3.5-.1.1-.3.3-.4.4-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2 1.2 1 2.1 1.3 2.5 1.4.3.1.5.1.6-.1.2-.2.7-.8.9-1 .2-.2.4-.2.6-.1l1.5.7c.2.1.4.2.4.3.1.2.1 1-.2 1.4-.4.5-1.3 1-2.4.7-1.7-.4-3.6-1.4-5-2.9-1.1-1.2-1.9-2.6-2.1-3.1-.2-.5-.9-1.7-.9-2.4 0-.6.3-1 .5-1.2Z" fill="currentColor"/></svg>
+        <div class="channel__icon channel__icon--brand">
+          <img class="messenger-logo messenger-logo--landing" src="img/logo-whatsapp.svg" width="36" height="36" alt="WhatsApp" loading="lazy" decoding="async">
         </div>
         <h3>WhatsApp</h3>
         <p>Уведомления через WhatsApp Business API от имени вашей организации — привычный канал для большинства клиентов.</p>
@@ -260,7 +261,7 @@
 
       <a class="channel channel--link" href="https://max.ru/se13527747_biz" target="_blank" rel="noopener noreferrer">
         <div class="channel__icon channel__icon--brand">
-          <img class="brand-logo" src="img/logo-max.png" width="56" height="56" alt="MAX" loading="lazy" decoding="async">
+          <img class="messenger-logo messenger-logo--landing" src="img/logo-max.png" width="36" height="36" alt="MAX" loading="lazy" decoding="async">
         </div>
         <h3>MAX</h3>
         <p>Поддержка отечественного мессенджера MAX — отправляем напоминания клиентам, которые предпочитают этот канал связи.</p>
@@ -597,7 +598,7 @@
             </button>
             <button type="button" class="cabinet-app__nav-btn" data-view="telegram">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 4 3 11l7 2 2 7 9-16Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 13 17 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Telegram
+              Telegram и MAX
             </button>
             <button type="button" class="cabinet-app__nav-btn" data-view="templates">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -945,9 +946,9 @@
             </form>
           </section>
 
-          <!-- Telegram -->
+          <!-- Telegram / MAX -->
           <section class="cabinet-app__view" data-view-panel="telegram" hidden>
-            <p class="cabinet-app__lead">Добавьте сотрудников предприятия — бот распознает их по Telegram @username и будет отправлять уведомления только им. Клиенты подключаются отдельно: делятся номером телефона и видят свои записи.</p>
+            <p class="cabinet-app__lead">Добавьте сотрудников — бот распознает их по @username в Telegram и/или MAX и будет отправлять уведомления о записях. Клиенты подключаются отдельно: делятся номером телефона в боте и получают напоминания.</p>
 
             <div class="cabinet-app__cards">
               <article class="cabinet-app__card cabinet-app__card--wide">
@@ -955,7 +956,7 @@
                   <h3>Сотрудники</h3>
                   <span class="cabinet-app__badge cabinet-app__badge--muted" id="staffCountBadge">0</span>
                 </div>
-                <p class="cabinet-app__hint">Укажите имя и Telegram @username сотрудника. После добавления он отправляет боту API-ключ компании — и чат привяжется автоматически.</p>
+                <p class="cabinet-app__hint">Укажите имя и хотя бы один @username (Telegram и/или MAX). После добавления сотрудник отправляет боту API-ключ компании — чат привяжется автоматически.</p>
 
                 <form class="cabinet-staff__form" id="staffCreateForm">
                   <div class="cabinet-staff__panel">
@@ -967,6 +968,10 @@
                       <label class="cabinet__field">
                         <span>Telegram <span class="cabinet__optional">@username</span></span>
                         <input type="text" name="telegram_username" id="staffTelegramUsername" placeholder="@anna_admin" autocomplete="off" spellcheck="false">
+                      </label>
+                      <label class="cabinet__field">
+                        <span>MAX <span class="cabinet__optional">@username</span></span>
+                        <input type="text" name="max_username" id="staffMaxUsername" placeholder="@anna_max" autocomplete="off" spellcheck="false">
                       </label>
                       <label class="cabinet__field cabinet-staff__field--phone">
                         <span>Телефон <span class="cabinet__optional">необязательно</span></span>
@@ -1001,7 +1006,7 @@
 
               <article class="cabinet-app__card">
                 <div class="cabinet-app__card-head">
-                  <h3>Подключение бота</h3>
+                  <h3>Telegram-бот</h3>
                   <span class="cabinet-app__badge" id="telegramStatus">Не подключено</span>
                 </div>
                 <ol class="cabinet-app__steps">
@@ -1017,9 +1022,36 @@
               </article>
 
               <article class="cabinet-app__card">
-                <h3>Подключённые чаты</h3>
+                <div class="cabinet-app__card-head">
+                  <h3>MAX-бот</h3>
+                  <span class="cabinet-app__badge" id="maxStatus">Не подключено</span>
+                </div>
+                <ol class="cabinet-app__steps">
+                  <li>Добавьте сотрудника с его MAX @username.</li>
+                  <li>Откройте бота ICS в MAX (ссылка ниже).</li>
+                  <li>Сотрудник отправляет API-ключ компании сообщением.</li>
+                  <li>Бот привяжет аккаунт и будет слать уведомления о записях.</li>
+                </ol>
+                <p class="cabinet-app__hint" style="margin-top:10px">
+                  <a href="https://max.ru/se13527747_bot" target="_blank" rel="noopener noreferrer">Открыть бота в MAX ↗</a>
+                </p>
+                <div class="cabinet-app__copy">
+                  <code id="maxApiKey">—</code>
+                  <button type="button" class="cabinet-app__copy-btn" data-copy-target="maxApiKey">Копировать ключ</button>
+                </div>
+              </article>
+
+              <article class="cabinet-app__card">
+                <h3>Подключённые Telegram</h3>
                 <div id="telegramManagersList">
                   <p class="cabinet-app__empty-inline">Пока нет привязанных Telegram-чатов.</p>
+                </div>
+              </article>
+
+              <article class="cabinet-app__card">
+                <h3>Подключённые MAX</h3>
+                <div id="maxManagersList">
+                  <p class="cabinet-app__empty-inline">Пока нет привязанных MAX-аккаунтов.</p>
                 </div>
               </article>
             </div>
@@ -1027,7 +1059,7 @@
 
           <!-- Шаблоны -->
           <section class="cabinet-app__view" data-view-panel="templates" hidden>
-            <p class="cabinet-app__lead">Настройте тексты для клиентов (WhatsApp/SMS) и для сотрудников (Telegram). Используйте плейсхолдеры в фигурных скобках.</p>
+            <p class="cabinet-app__lead">Настройте тексты для клиентов (WhatsApp/SMS/MAX) и для сотрудников (Telegram/MAX). Используйте плейсхолдеры в фигурных скобках.</p>
             <div class="cabinet-app__template-list" id="templatesList">
               <div class="cabinet__loading" id="templatesLoading">Загрузка шаблонов…</div>
             </div>
@@ -1042,21 +1074,21 @@
                 <h3 class="cabinet-community__heading">Telegram</h3>
                 <div class="cabinet-community__list">
                   <a class="cabinet-community__item" href="https://t.me/icsnotify_public" target="_blank" rel="noopener noreferrer">
-                    <img class="cabinet-community__logo" src="img/logo-telegram.png" width="40" height="40" alt="" loading="lazy" decoding="async">
+                    <img class="messenger-logo" src="img/logo-telegram.svg" width="28" height="28" alt="" loading="lazy" decoding="async">
                     <span class="cabinet-community__text">
                       <strong>Канал @icsnotify_public</strong>
                       <em>Новости ICS, обновления и советы для клиентов</em>
                     </span>
                   </a>
                   <a class="cabinet-community__item" href="https://t.me/ICSnotify00_bot" target="_blank" rel="noopener noreferrer">
-                    <img class="cabinet-community__logo" src="img/logo-telegram.png" width="40" height="40" alt="" loading="lazy" decoding="async">
+                    <img class="messenger-logo" src="img/logo-telegram.svg" width="28" height="28" alt="" loading="lazy" decoding="async">
                     <span class="cabinet-community__text">
                       <strong>Бот @ICSnotify00_bot</strong>
                       <em>Подключение уведомлений и работа с записями</em>
                     </span>
                   </a>
                   <a class="cabinet-community__item" href="https://t.me/icsnotify" target="_blank" rel="noopener noreferrer">
-                    <img class="cabinet-community__logo" src="img/logo-telegram.png" width="40" height="40" alt="" loading="lazy" decoding="async">
+                    <img class="messenger-logo" src="img/logo-telegram.svg" width="28" height="28" alt="" loading="lazy" decoding="async">
                     <span class="cabinet-community__text">
                       <strong>Аккаунт @icsnotify</strong>
                       <em>Связь с командой ICS и поддержка по сервису</em>
@@ -1069,14 +1101,14 @@
                 <h3 class="cabinet-community__heading">MAX</h3>
                 <div class="cabinet-community__list">
                   <a class="cabinet-community__item" href="https://max.ru/se13527747_biz" target="_blank" rel="noopener noreferrer">
-                    <img class="cabinet-community__logo" src="img/logo-max.png" width="40" height="40" alt="" loading="lazy" decoding="async">
+                    <img class="messenger-logo" src="img/logo-max.png" width="28" height="28" alt="" loading="lazy" decoding="async">
                     <span class="cabinet-community__text">
                       <strong>Бизнес-профиль ICS</strong>
                       <em>Официальная страница сервиса в MAX</em>
                     </span>
                   </a>
                   <a class="cabinet-community__item" href="https://max.ru/se13527747_bot" target="_blank" rel="noopener noreferrer">
-                    <img class="cabinet-community__logo" src="img/logo-max.png" width="40" height="40" alt="" loading="lazy" decoding="async">
+                    <img class="messenger-logo" src="img/logo-max.png" width="28" height="28" alt="" loading="lazy" decoding="async">
                     <span class="cabinet-community__text">
                       <strong>Бот ICS в MAX</strong>
                       <em>Уведомления и напоминания через мессенджер MAX</em>

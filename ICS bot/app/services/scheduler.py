@@ -164,6 +164,7 @@ async def _send_appointment_reminder(appointment_id: uuid.UUID) -> None:
 
             client_phone = appointment.client.phone
             client_name = appointment.client.full_name
+            client_max_user_id = appointment.client.max_user_id
             service_name = appointment.service_name
             appointment_date = appointment.appointment_date
             appointment_time = appointment.appointment_time
@@ -190,7 +191,7 @@ async def _send_appointment_reminder(appointment_id: uuid.UUID) -> None:
         return
 
     try:
-        await notify_client(client_phone, reminder_text)
+        await notify_client(client_phone, reminder_text, max_user_id=client_max_user_id)
         async with AsyncSessionLocal() as session:
             await increment_reminders_used(session, company_id)
             await session.commit()

@@ -147,14 +147,24 @@ async def _send_sms_via_sms_ru(phone: str, text: str) -> bool:
     return True
 
 
-async def notify_client(phone: str, text: str) -> None:
-    """Best-effort fan-out of a client-facing text to both WhatsApp and SMS.
+async def notify_client(
+    phone: str,
+    text: str,
+    *,
+    max_user_id: int | None = None,
+) -> None:
+    """Best-effort fan-out of a client-facing text to WhatsApp, SMS, and MAX.
 
-    Both channels are attempted in parallel; a failure on one channel does not
-    prevent the other from being tried, and neither failure raises.
+    Channels are attempted in parallel; a failure on one channel does not
+    prevent the others from being tried, and neither failure raises.
     """
-    await asyncio.gather(
+    tasks = [
         send_client_whatsapp(phone, text),
         send_client_sms(phone, text),
-        return_exceptions=True,
-    )
+    ]
+    if max_user_id is not None:
+        from app.services.max_api import send_max_message
+
+        tasks.append(send_max_message(text=text, user_id=max_user_id))
+
+    await asyncio.gather(*tasks, return_exceptions=True)

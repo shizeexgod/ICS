@@ -42,11 +42,14 @@ def staff_out(staff: CompanyStaff) -> dict:
         "full_name": staff.full_name,
         "phone": staff.phone,
         "telegram_username": staff.telegram_username,
+        "max_username": staff.max_username,
         "role": staff.role,
         "notify_bookings": staff.notify_bookings,
         "tg_chat_id": staff.tg_chat_id,
+        "max_user_id": staff.max_user_id,
         "is_active": staff.is_active,
         "is_connected": staff.tg_chat_id is not None,
+        "is_max_connected": staff.max_user_id is not None,
         "created_at": staff.created_at,
     }
 
@@ -194,3 +197,108 @@ async def get_notification_chat_ids(session: AsyncSession, company_id: uuid.UUID
         select(CompanyManager.tg_chat_id).where(CompanyManager.company_id == company_id)
     )
     return list(legacy.scalars().all())
+
+
+async def find_staff_for_max_binding(
+    session: AsyncSession,
+    *,
+    company_id: uuid.UUID,
+    max_user_id: int,
+    max_username: str | None,
+) -> CompanyStaff | None:
+    """Match a MAX user to a pre-registered staff row for this company."""
+    bound = await session.execute(
+        select(CompanyStaff).where(
+            CompanyStaff.company_id == company_id,
+            CompanyStaff.max_user_id == max_user_id,
+            CompanyStaff.is_active.is_(True),
+        )
+    )
+    existing = bound.scalars().first()
+    if existing is not None:
+        return existing
+
+    username = normalize_username(max_username)
+    if username:
+        by_username = await session.execute(
+            select(CompanyStaff).where(
+                CompanyStaff.company_id == company_id,
+                func.lower(CompanyStaff.max_username) == username,
+                CompanyStaff.is_active.is_(True),
+            )
+        )
+        match = by_username.scalars().first()
+        if match is not None:
+            return match
+
+    return None
+
+
+async def bind_staff_max(
+    session: AsyncSession,
+    *,
+    company: Company,
+    max_user_id: int,
+    max_username: str | None,
+) -> tuple[CompanyStaff | None, str | None]:
+    """Bind a MAX user to company staff.
+
+    Returns (staff, error_message). On success error_message is None.
+    """
+    staff_required = await company_has_active_staff(session, company.id)
+
+    staff = await find_staff_for_max_binding(
+        session,
+        company_id=company.id,
+        max_user_id=max_user_id,
+        max_username=max_username,
+    )
+
+    if staff_required and staff is None:
+        return None, (
+            "Вы не в списке сотрудников этой компании. "
+            "Попросите администратора добавить ваш MAX username в кабинете ICS."
+        )
+
+    if staff is None:
+        staff = CompanyStaff(
+            company_id=company.id,
+            full_name=normalize_username(max_username) or f"Сотрудник MAX {max_user_id}",
+            max_username=normalize_username(max_username),
+            role="employee",
+        )
+        session.add(staff)
+        await session.flush()
+
+    staff.max_user_id = max_user_id
+    if max_username and not staff.max_username:
+        staff.max_username = normalize_username(max_username)
+
+    await session.commit()
+    await session.refresh(staff)
+    return staff, None
+
+
+async def is_staff_max_user(session: AsyncSession, max_user_id: int) -> bool:
+    result = await session.execute(
+        select(func.count(CompanyStaff.id)).where(
+            CompanyStaff.max_user_id == max_user_id,
+            CompanyStaff.is_active.is_(True),
+        )
+    )
+    return (result.scalar() or 0) > 0
+
+
+async def get_notification_max_user_ids(
+    session: AsyncSession, company_id: uuid.UUID
+) -> list[int]:
+    """Return MAX user ids that should receive new-booking notifications."""
+    staff_result = await session.execute(
+        select(CompanyStaff.max_user_id).where(
+            CompanyStaff.company_id == company_id,
+            CompanyStaff.is_active.is_(True),
+            CompanyStaff.notify_bookings.is_(True),
+            CompanyStaff.max_user_id.is_not(None),
+        )
+    )
+    return [uid for uid in staff_result.scalars().all() if uid is not None]

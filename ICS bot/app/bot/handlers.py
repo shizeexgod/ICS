@@ -285,6 +285,7 @@ async def handle_confirm_appointment(
     appointment_date = None
     appointment_time = None
     company_id: uuid.UUID | None = None
+    client_max_user_id: int | None = None
 
     try:
         async with AsyncSessionLocal() as session:
@@ -338,6 +339,7 @@ async def handle_confirm_appointment(
             service_name = appointment.service_name
             appointment_date = appointment.appointment_date
             appointment_time = appointment.appointment_time
+            client_max_user_id = client.max_user_id
     except Exception:  # noqa: BLE001 - never let a handler crash the dispatcher
         logger.exception(
             "Failed to confirm appointment_id=%s from callback.", appointment_id
@@ -375,10 +377,14 @@ async def handle_confirm_appointment(
         if not enabled or not confirmation_text:
             return
         try:
-            await notify_client(client_phone, confirmation_text)
+            await notify_client(
+                client_phone,
+                confirmation_text,
+                max_user_id=client_max_user_id,
+            )
         except Exception:  # noqa: BLE001 - a broken client notification must not break the callback
             logger.exception(
                 "Confirmed appointment_id=%s but failed to notify the client by "
-                "WhatsApp/SMS.",
+                "WhatsApp/SMS/MAX.",
                 appointment_id,
             )

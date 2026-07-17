@@ -6,7 +6,7 @@ import datetime as dt
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,7 @@ class Client(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tg_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    max_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     preferred_messenger: Mapped[str] = mapped_column(
         String(32), nullable=False, default="telegram"
     )

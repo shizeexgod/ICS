@@ -26,6 +26,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.max_webhook import router as max_webhook_router
 from app.api.v1.billing import router as billing_v1_router
 from app.api.v1.auth import router as auth_v1_router
 from app.api.v1.company import router as company_v1_router
@@ -36,6 +37,7 @@ from app.api.webhooks import router as webhooks_router
 from app.bot.main import start_bot_polling, stop_bot_polling
 from app.core.config import settings
 from app.core.database import check_database_connection
+from app.services.max_api import max_configured, subscribe_webhook
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
 logging.basicConfig(
@@ -59,6 +61,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     start_scheduler()
     logger.info("Appointment reminder scheduler started.")
 
+    if max_configured():
+        webhook_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/webhook/max"
+        secret = (settings.MAX_WEBHOOK_SECRET or "").strip()
+        ok = await subscribe_webhook(webhook_url, secret)
+        if ok:
+            logger.info("MAX webhook subscribed: %s", webhook_url)
+        else:
+            logger.warning("MAX webhook subscription failed for %s", webhook_url)
+    else:
+        logger.info("MAX_BOT_TOKEN is empty; MAX messenger integration is disabled.")
+
     try:
         yield
     finally:
@@ -70,7 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="ICS Bot Service",
-    description="FastAPI webhook layer + aiogram v3 Telegram bot for the ICS booking system.",
+    description="FastAPI webhook layer + aiogram v3 Telegram bot + MAX messenger for the ICS booking system.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -86,6 +99,7 @@ app.add_middleware(
 )
 
 app.include_router(webhooks_router)
+app.include_router(max_webhook_router)
 app.include_router(auth_v1_router)
 app.include_router(company_v1_router)
 app.include_router(templates_v1_router)
@@ -102,6 +116,7 @@ async def health_check() -> dict[str, str]:
         "status": "ok" if db_ok else "degraded",
         "environment": settings.ENVIRONMENT,
         "database": "connected" if db_ok else "unreachable",
+        "max": "configured" if max_configured() else "disabled",
     }
 
 

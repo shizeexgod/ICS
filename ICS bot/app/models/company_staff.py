@@ -33,9 +33,11 @@ class CompanyStaff(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    max_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="employee")
     notify_bookings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     tg_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
+    max_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

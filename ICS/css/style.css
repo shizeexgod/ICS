@@ -781,18 +781,25 @@ body.nav-open {
 }
 .channel:hover .channel__icon:not(.channel__icon--brand) { transform: scale(1.12); }
 .channel__icon--brand {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 18px;
-  border-radius: 14px;
-  overflow: hidden;
+  width: auto;
+  height: auto;
+  margin: 0 auto 16px;
+  border-radius: 0;
+  overflow: visible;
   background: transparent;
-}
-.channel__icon--brand .brand-logo {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+}
+.messenger-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.messenger-logo--landing {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
 }
 .channel__icon--tg { color: var(--tg); }
 .channel__icon--wa { color: var(--wa); }
@@ -2659,12 +2666,9 @@ body.cabinet-open .footer {
   background: rgba(56, 189, 248, 0.03);
 }
 
-.cabinet-community__logo {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  object-fit: cover;
+.cabinet-community__item .messenger-logo {
+  width: 28px;
+  height: 28px;
 }
 
 .cabinet-community__text {

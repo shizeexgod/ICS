@@ -280,6 +280,40 @@ async def get_telegram_status(
     )
 
 
+@router.get("/max", response_model=CompanyMaxOut)
+async def get_max_status(
+    session: AsyncSession = Depends(get_db_session),
+    company: Company = Depends(get_current_admin_company),
+) -> CompanyMaxOut:
+    """Return MAX messenger staff bindings for this company."""
+    staff_result = await session.execute(
+        select(CompanyStaff)
+        .where(
+            CompanyStaff.company_id == company.id,
+            CompanyStaff.is_active.is_(True),
+            CompanyStaff.max_user_id.is_not(None),
+        )
+        .order_by(CompanyStaff.full_name)
+    )
+    staff_rows = staff_result.scalars().all()
+    managers = [
+        MaxManagerOut(
+            max_user_id=s.max_user_id,
+            full_name=s.full_name,
+            max_username=s.max_username,
+            role=s.role,
+        )
+        for s in staff_rows
+        if s.max_user_id is not None
+    ]
+    staff_required = await company_has_active_staff(session, company.id)
+    return CompanyMaxOut(
+        connected=len(managers) > 0,
+        managers=managers,
+        staff_required=staff_required,
+    )
+
+
 def _staff_response(staff: CompanyStaff) -> StaffOut:
     data = staff_out(staff)
     return StaffOut(**data)
@@ -337,11 +371,26 @@ async def create_company_staff(
                 detail="Сотрудник с таким Telegram username уже добавлен.",
             )
 
+    if payload.max_username:
+        dup_max = await session.execute(
+            select(CompanyStaff).where(
+                CompanyStaff.company_id == company.id,
+                func.lower(CompanyStaff.max_username) == payload.max_username,
+                CompanyStaff.is_active.is_(True),
+            )
+        )
+        if dup_max.scalars().first() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Сотрудник с таким MAX username уже добавлен.",
+            )
+
     staff = CompanyStaff(
         company_id=company.id,
         full_name=payload.full_name,
         phone=payload.phone,
         telegram_username=payload.telegram_username,
+        max_username=payload.max_username,
         role=payload.role,
         notify_bookings=payload.notify_bookings,
     )
@@ -382,6 +431,8 @@ async def update_company_staff(
         staff.phone = payload.phone or None
     if payload.telegram_username is not None:
         staff.telegram_username = payload.telegram_username
+    if payload.max_username is not None:
+        staff.max_username = payload.max_username
     if payload.role is not None:
         staff.role = payload.role
     if payload.notify_bookings is not None:
@@ -390,6 +441,7 @@ async def update_company_staff(
         staff.is_active = payload.is_active
         if not payload.is_active:
             staff.tg_chat_id = None
+            staff.max_user_id = None
 
     await session.commit()
     await session.refresh(staff)
@@ -543,7 +595,11 @@ async def update_company_appointment_status(
         )
         if enabled and cancel_text:
             try:
-                await notify_client(client.phone, cancel_text)
+                await notify_client(
+                    client.phone,
+                    cancel_text,
+                    max_user_id=client.max_user_id,
+                )
             except Exception:
                 logger.exception(
                     "Failed to send cancellation notification for appointment_id=%s",

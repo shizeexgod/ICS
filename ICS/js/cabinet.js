@@ -12,7 +12,7 @@
     bookings: { eyebrow: "Записи", title: "Записи клиентов" },
     calendar: { eyebrow: "Расписание", title: "Календарь" },
     settings: { eyebrow: "Настройки", title: "Настройки и подписка" },
-    telegram: { eyebrow: "Интеграции", title: "Telegram" },
+    telegram: { eyebrow: "Интеграции", title: "Telegram и MAX" },
     templates: { eyebrow: "Контент", title: "Шаблоны уведомлений" },
     community: { eyebrow: "ICS в сети", title: "Сообщество" },
   };
@@ -67,8 +67,11 @@
   const overviewApiKey = document.getElementById("overviewApiKey");
   const settingsApiKey = document.getElementById("settingsApiKey");
   const telegramApiKey = document.getElementById("telegramApiKey");
+  const maxApiKey = document.getElementById("maxApiKey");
   const telegramStatus = document.getElementById("telegramStatus");
+  const maxStatus = document.getElementById("maxStatus");
   const telegramManagersList = document.getElementById("telegramManagersList");
+  const maxManagersList = document.getElementById("maxManagersList");
   const staffCreateForm = document.getElementById("staffCreateForm");
   const staffCreateError = document.getElementById("staffCreateError");
   const staffList = document.getElementById("staffList");
@@ -665,12 +668,15 @@
   function formatStaffMeta(staff) {
     const parts = [];
     if (staff.telegram_username) {
-      parts.push(`@${staff.telegram_username}`);
+      parts.push(`TG @${staff.telegram_username}`);
+    }
+    if (staff.max_username) {
+      parts.push(`MAX @${staff.max_username}`);
     }
     if (staff.phone) {
       parts.push(staff.phone);
     }
-    return parts.join(" · ") || "Telegram @username не указан";
+    return parts.join(" · ") || "Username не указан";
   }
 
   function renderStaffList(staffItems) {
@@ -691,9 +697,14 @@
 
     staffList.innerHTML = active
       .map((staff) => {
-        const connected = staff.is_connected;
+        const tgOk = Boolean(staff.is_connected);
+        const maxOk = Boolean(staff.is_max_connected);
+        const connected = tgOk || maxOk;
         const statusClass = connected ? "is-connected" : "";
-        const statusText = connected ? "Подключён" : "Ожидает";
+        let statusText = "Ожидает";
+        if (tgOk && maxOk) statusText = "TG + MAX";
+        else if (tgOk) statusText = "Telegram";
+        else if (maxOk) statusText = "MAX";
         const role = staff.role || "employee";
         const roleClass = ["owner", "director", "administrator"].includes(role)
           ? ` cabinet-staff__role-badge--${role}`
@@ -745,6 +756,7 @@
       await apiFetch(`/api/v1/company/staff/${staffId}`, { method: "DELETE" });
       await loadStaffList();
       await loadTelegramStatus();
+      await loadMaxStatus();
     } catch (err) {
       alert(err.message);
       setButtonLoading(btn, false);
@@ -756,6 +768,13 @@
     telegramStatus.textContent = connected ? "Подключено" : "Не подключено";
     telegramStatus.classList.remove("cabinet-app__badge--muted");
     telegramStatus.classList.toggle("cabinet-app__badge--ok", connected);
+  }
+
+  function setMaxStatusBadge(connected) {
+    if (!maxStatus) return;
+    maxStatus.textContent = connected ? "Подключено" : "Не подключено";
+    maxStatus.classList.remove("cabinet-app__badge--muted");
+    maxStatus.classList.toggle("cabinet-app__badge--ok", connected);
   }
 
   async function loadTelegramStatus() {
@@ -786,6 +805,32 @@
         .join("");
     } catch {
       setTelegramStatusBadge(false);
+    }
+  }
+
+  async function loadMaxStatus() {
+    if (!maxStatus) return;
+    try {
+      const data = await apiFetch("/api/v1/company/max");
+      setMaxStatusBadge(Boolean(data.connected));
+
+      if (!maxManagersList) return;
+      if (!data.managers?.length) {
+        maxManagersList.innerHTML =
+          '<p class="cabinet-app__empty-inline">Пока нет привязанных MAX-аккаунтов.</p>';
+        return;
+      }
+      maxManagersList.innerHTML = data.managers
+        .map((m) => {
+          const name = m.full_name || "Сотрудник";
+          const username = m.max_username ? `@${m.max_username}` : "";
+          const role = m.role ? getRoleLabel(m.role) : "";
+          const meta = [username, role].filter(Boolean).join(" · ");
+          return `<p class="cabinet-app__manager-item"><strong>${name}</strong>${meta ? ` — ${meta}` : ""}<br>User ID: <code>${m.max_user_id}</code></p>`;
+        })
+        .join("");
+    } catch {
+      setMaxStatusBadge(false);
     }
   }
 
@@ -840,6 +885,7 @@
     overviewApiKey.textContent = key;
     settingsApiKey.textContent = key;
     telegramApiKey.textContent = key;
+    if (maxApiKey) maxApiKey.textContent = key;
     settingsCompanyName.value = profile.companyName || "";
     settingsOwnerEmail.value = profile.ownerEmail || "";
     if (profile.plan) syncPlanUi(profile.plan);
@@ -875,6 +921,7 @@
     } else if (viewId === "telegram") {
       loadStaffList();
       loadTelegramStatus();
+      loadMaxStatus();
     } else if (viewId === "templates") {
       warmUpBackend();
       loadTemplates();
@@ -892,6 +939,7 @@
     switchView(activeView);
     loadDashboardStats();
     loadTelegramStatus();
+    loadMaxStatus();
     loadReferralProgram();
     requestAnimationFrame(() => {
       document.querySelectorAll("[data-billing-toggle]").forEach((toggle) => {
@@ -1999,6 +2047,7 @@
     const payload = {
       full_name: String(formData.get("full_name") || "").trim(),
       telegram_username: String(formData.get("telegram_username") || "").trim() || null,
+      max_username: String(formData.get("max_username") || "").trim() || null,
       phone: String(formData.get("phone") || "").trim() || null,
       role: String(formData.get("role") || "employee"),
     };
@@ -2012,6 +2061,7 @@
       setStaffRole("employee");
       await loadStaffList();
       await loadTelegramStatus();
+      await loadMaxStatus();
     } catch (err) {
       showError(staffCreateError, formatApiError(err.message));
     } finally {
